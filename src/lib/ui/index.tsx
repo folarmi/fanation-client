@@ -1,5 +1,11 @@
 /** Fanation UI primitives — presentational, store-free. */
-import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import React, {
+  MouseEventHandler,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { fhash } from "@/lib/core";
 import type { ToastMsg } from "@/lib/core";
 import { avatarFor, rungFor, srcsetFor } from "./media";
@@ -83,8 +89,18 @@ import shieldCheckmarkSolid from "@/assets/icons/shield-checkmark.svg?raw";
 import cameraSolid from "@/assets/icons/camera.svg?raw";
 import calendarSolid from "@/assets/icons/calendar.svg?raw";
 
-const inner = (raw: string) => raw.replace(/^<svg[^>]*>/, "").replace(/<\/svg>\s*$/, "");
+const inner = (raw: string) =>
+  raw.replace(/^<svg[^>]*>/, "").replace(/<\/svg>\s*$/, "");
 const outline = (raw: string) => inner(raw).replace(/#000/g, "currentColor");
+
+type IconProps = {
+  n: string;
+  s?: number;
+  c?: string;
+  solid?: boolean;
+  fill?: string;
+  onClick?: MouseEventHandler<SVGSVGElement>;
+};
 
 const OUTLINE: Record<string, string> = {
   home: outline(homeOutline),
@@ -157,20 +173,35 @@ const SOLID: Record<string, string> = {
   cal: inner(calendarSolid),
 };
 
-export function Icon({ n, s = 20, c = "currentColor", solid, fill }: { n: string; s?: number; c?: string; solid?: boolean; fill?: string }) {
+export function Icon({
+  n,
+  s = 20,
+  c = "currentColor",
+  solid,
+  fill,
+  onClick,
+}: IconProps) {
   // `fill` is the older API — passing a colour used to also switch to the solid
   // glyph, which conflated "what colour" with "which variant". `solid` now
   // carries the variant; `fill` is kept as a colour-only alias so the handful
   // of existing call sites (a toggled heart, a white play triangle) still work.
   const useSolid = solid || !!fill;
-  const markup = (useSolid ? SOLID[n] : undefined) ?? OUTLINE[n] ?? OUTLINE.grid;
+
+  const markup =
+    (useSolid ? SOLID[n] : undefined) ?? OUTLINE[n] ?? OUTLINE.grid;
+
   return (
     <svg
       width={s}
       height={s}
       viewBox="0 0 512 512"
       fill={useSolid && SOLID[n] ? "currentColor" : "none"}
-      style={{ flex: "none", color: fill || c }}
+      onClick={onClick}
+      style={{
+        flex: "none",
+        color: fill || c,
+        cursor: onClick ? "pointer" : undefined,
+      }}
       dangerouslySetInnerHTML={{ __html: markup }}
     />
   );
@@ -203,13 +234,17 @@ export function bg(seed: string): string {
  * paint — a poster frame showing for one tick is invisible, a video that
  * autoplayed off screen is not.
  */
-export function useInView<T extends HTMLElement = HTMLDivElement>(amount = 0.55) {
+export function useInView<T extends HTMLElement = HTMLDivElement>(
+  amount = 0.55,
+) {
   const ref = useRef<T>(null);
   const [seen, setSeen] = useState(false);
   useEffect(() => {
     const el = ref.current;
     if (!el || typeof IntersectionObserver === "undefined") return;
-    const io = new IntersectionObserver(([e]) => setSeen(e.isIntersecting), { threshold: amount });
+    const io = new IntersectionObserver(([e]) => setSeen(e.isIntersecting), {
+      threshold: amount,
+    });
     io.observe(el);
     return () => io.disconnect();
   }, [amount]);
@@ -241,19 +276,27 @@ export function useInView<T extends HTMLElement = HTMLDivElement>(amount = 0.55)
  * everything loads exactly as it did before this hook existed. Starting false
  * there would be a browser that never loads a poster at all.
  */
-export function useNear<T extends HTMLElement = HTMLDivElement>(margin = 200, now = false) {
+export function useNear<T extends HTMLElement = HTMLDivElement>(
+  margin = 200,
+  now = false,
+) {
   const ref = useRef<T>(null);
-  const [near, setNear] = useState(() => typeof IntersectionObserver === "undefined");
+  const [near, setNear] = useState(
+    () => typeof IntersectionObserver === "undefined",
+  );
   const on = near || now;
   useEffect(() => {
     if (on) return;
     const el = ref.current;
     if (!el) return;
-    const io = new IntersectionObserver(([e]) => {
-      if (!e.isIntersecting) return;
-      setNear(true);
-      io.disconnect();
-    }, { rootMargin: `${margin}px` });
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (!e.isIntersecting) return;
+        setNear(true);
+        io.disconnect();
+      },
+      { rootMargin: `${margin}px` },
+    );
     io.observe(el);
     return () => io.disconnect();
   }, [on, margin]);
@@ -275,18 +318,56 @@ export function useNear<T extends HTMLElement = HTMLDivElement>(margin = 200, no
  * retina screen asks for the 112px rung instead of the 320px original, which is
  * most of what the admin user table was paying for.
  */
-export function Avatar({ name = "", size = 40, ring, src }: { name?: string; size?: number; ring?: string; src?: string }) {
+export function Avatar({
+  name = "",
+  size = 40,
+  ring,
+  src,
+}: {
+  name?: string;
+  size?: number;
+  ring?: string;
+  src?: string;
+}) {
   const h = fhash(name);
-  const init = (name.split(" ").map((w) => w[0]).slice(0, 2).join("") || "?").toUpperCase();
+  const init = (
+    name
+      .split(" ")
+      .map((w) => w[0])
+      .slice(0, 2)
+      .join("") || "?"
+  ).toUpperCase();
   const url = src ?? avatarFor(name);
   const [broken, setBroken] = useState(false);
   return (
-    <div className="av" style={{ width: size, height: size, fontSize: size * 0.36, background: `linear-gradient(135deg,hsl(${h % 360},66%,55%),hsl(${(h + 50) % 360},66%,42%))`, boxShadow: ring ? `0 0 0 2px ${ring}` : "none" }}>
+    <div
+      className="av"
+      style={{
+        width: size,
+        height: size,
+        fontSize: size * 0.36,
+        background: `linear-gradient(135deg,hsl(${h % 360},66%,55%),hsl(${(h + 50) % 360},66%,42%))`,
+        boxShadow: ring ? `0 0 0 2px ${ring}` : "none",
+      }}
+    >
       {url && !broken ? (
-        <img src={url} srcSet={srcsetFor(url)} sizes={`${size}px`}
-          alt="" width={size} height={size} loading="lazy" decoding="async"
+        <img
+          src={url}
+          srcSet={srcsetFor(url)}
+          sizes={`${size}px`}
+          alt=""
+          width={size}
+          height={size}
+          loading="lazy"
+          decoding="async"
           onError={() => setBroken(true)}
-          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            display: "block",
+          }}
+        />
       ) : (
         init
       )}
@@ -320,29 +401,61 @@ export function Avatar({ name = "", size = 40, ring, src }: { name?: string; siz
  * page, because collections and explore put a photograph in the same box and
  * naming the box is what keeps one string true for both.
  */
-export function Photo({ src, seed, alt = "", radius, blur, scale, priority, sizes, fill = true, style, children }: {
-  src: string; seed?: string; alt?: string; radius?: number | string; blur?: number;
-  scale?: number; priority?: boolean; sizes?: string; fill?: boolean;
-  style?: React.CSSProperties; children?: React.ReactNode;
+export function Photo({
+  src,
+  seed,
+  alt = "",
+  radius,
+  blur,
+  scale,
+  priority,
+  sizes,
+  fill = true,
+  style,
+  children,
+}: {
+  src: string;
+  seed?: string;
+  alt?: string;
+  radius?: number | string;
+  blur?: number;
+  scale?: number;
+  priority?: boolean;
+  sizes?: string;
+  fill?: boolean;
+  style?: React.CSSProperties;
+  children?: React.ReactNode;
 }) {
   return (
-    <div style={{
-      position: fill ? "absolute" : "relative",
-      ...(fill ? { inset: 0 } : null),
-      borderRadius: radius,
-      overflow: "hidden",
-      background: bg(seed || src),
-      ...style,
-    }}>
-      <img src={src} srcSet={sizes ? srcsetFor(src) : undefined} sizes={sizes}
-        alt={alt} loading={priority ? "eager" : "lazy"} decoding="async"
+    <div
+      style={{
+        position: fill ? "absolute" : "relative",
+        ...(fill ? { inset: 0 } : null),
+        borderRadius: radius,
+        overflow: "hidden",
+        background: bg(seed || src),
+        ...style,
+      }}
+    >
+      <img
+        src={src}
+        srcSet={sizes ? srcsetFor(src) : undefined}
+        sizes={sizes}
+        alt={alt}
+        loading={priority ? "eager" : "lazy"}
+        decoding="async"
         fetchPriority={priority ? "high" : "auto"}
         style={{
-          position: "absolute", inset: 0, width: "100%", height: "100%",
-          objectFit: "cover", display: "block",
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          display: "block",
           filter: blur ? `blur(${blur}px)` : undefined,
           transform: scale ? `scale(${scale})` : undefined,
-        }} />
+        }}
+      />
       {children}
     </div>
   );
@@ -366,7 +479,17 @@ export function Photo({ src, seed, alt = "", radius, blur, scale, priority, size
  * colour stop at `hold=0`, so every call site that does not ask for it paints
  * exactly the gradient string it painted before.
  */
-export function Scrim({ from = 0.8, height = "58%", top = false, hold = 0 }: { from?: number; height?: number | string; top?: boolean; hold?: number }) {
+export function Scrim({
+  from = 0.8,
+  height = "58%",
+  top = false,
+  hold = 0,
+}: {
+  from?: number;
+  height?: number | string;
+  top?: boolean;
+  hold?: number;
+}) {
   const knee = hold + (1 - hold) * 0.44;
   const stops = [
     `rgba(6,8,16,${from}) 0%`,
@@ -375,12 +498,18 @@ export function Scrim({ from = 0.8, height = "58%", top = false, hold = 0 }: { f
     `rgba(6,8,16,0) 100%`,
   ];
   return (
-    <div aria-hidden style={{
-      position: "absolute", left: 0, right: 0, height,
-      ...(top ? { top: 0 } : { bottom: 0 }),
-      background: `linear-gradient(${top ? 180 : 0}deg, ${stops.join(", ")})`,
-      pointerEvents: "none",
-    }} />
+    <div
+      aria-hidden
+      style={{
+        position: "absolute",
+        left: 0,
+        right: 0,
+        height,
+        ...(top ? { top: 0 } : { bottom: 0 }),
+        background: `linear-gradient(${top ? 180 : 0}deg, ${stops.join(", ")})`,
+        pointerEvents: "none",
+      }}
+    />
   );
 }
 
@@ -423,9 +552,26 @@ export function Scrim({ from = 0.8, height = "58%", top = false, hold = 0 }: { f
  * in a layout effect, so the measure-then-arm round trip completes before the
  * browser paints: nothing flashes, and no poster is fetched at two sizes.
  */
-export function Loop({ src, poster, active = true, sound = false, radius, fit = "cover", priority, style, children }: {
-  src: string; poster?: string; active?: boolean; sound?: boolean; radius?: number | string;
-  fit?: "cover" | "contain"; priority?: boolean; style?: React.CSSProperties; children?: React.ReactNode;
+export function Loop({
+  src,
+  poster,
+  active = true,
+  sound = false,
+  radius,
+  fit = "cover",
+  priority,
+  style,
+  children,
+}: {
+  src: string;
+  poster?: string;
+  active?: boolean;
+  sound?: boolean;
+  radius?: number | string;
+  fit?: "cover" | "contain";
+  priority?: boolean;
+  style?: React.CSSProperties;
+  children?: React.ReactNode;
 }) {
   const ref = useRef<HTMLVideoElement>(null);
   const [box, near] = useNear<HTMLDivElement>(200, priority);
@@ -464,12 +610,34 @@ export function Loop({ src, poster, active = true, sound = false, radius, fit = 
   }, [sound]);
 
   return (
-    <div ref={box} style={{
-      position: "absolute", inset: 0, borderRadius: radius, overflow: "hidden",
-      background: bg(poster || src), ...style,
-    }}>
-      <video ref={ref} src={vsrc} poster={vposter} muted={!sound} loop playsInline preload="metadata"
-        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: fit, display: "block" }} />
+    <div
+      ref={box}
+      style={{
+        position: "absolute",
+        inset: 0,
+        borderRadius: radius,
+        overflow: "hidden",
+        background: bg(poster || src),
+        ...style,
+      }}
+    >
+      <video
+        ref={ref}
+        src={vsrc}
+        poster={vposter}
+        muted={!sound}
+        loop
+        playsInline
+        preload="metadata"
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          objectFit: fit,
+          display: "block",
+        }}
+      />
       {children}
     </div>
   );
@@ -492,15 +660,38 @@ export function CoinBadge({ v, mint }: { v: string | number; mint?: boolean }) {
   );
 }
 
-export function StatCard({ label, value, sub, icon, color }: { label: string; value: string; sub?: string; icon: string; color?: string }) {
+export function StatCard({
+  label,
+  value,
+  sub,
+  icon,
+  color,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  icon: string;
+  color?: string;
+}) {
   return (
     <div className="card" style={{ padding: 18 }}>
       <div className="row between">
         <span className="up muted">{label}</span>
-        <span style={{ color: color || "var(--muted)" }}><Icon n={icon} /></span>
+        <span style={{ color: color || "var(--muted)" }}>
+          <Icon n={icon} />
+        </span>
       </div>
-      <div className="statnum" style={{ marginTop: 12, color: color || "var(--text)", fontSize: 34 }}>{value}</div>
-      {sub && <div className="muted t13" style={{ marginTop: 4 }}>{sub}</div>}
+      <div
+        className="statnum"
+        style={{ marginTop: 12, color: color || "var(--text)", fontSize: 34 }}
+      >
+        {value}
+      </div>
+      {sub && (
+        <div className="muted t13" style={{ marginTop: 4 }}>
+          {sub}
+        </div>
+      )}
     </div>
   );
 }
@@ -514,16 +705,41 @@ export interface MenuItem {
   fn?: () => void;
 }
 
-export function Menu({ items, trigger, placement = "bottom", align = "right", triggerClassName, triggerStyle }: { items: Array<MenuItem | "-" | false | null | undefined>; trigger?: React.ReactNode; placement?: "top" | "bottom"; align?: "left" | "right"; triggerClassName?: string; triggerStyle?: React.CSSProperties }) {
+export function Menu({
+  items,
+  trigger,
+  placement = "bottom",
+  align = "right",
+  triggerClassName,
+  triggerStyle,
+}: {
+  items: Array<MenuItem | "-" | false | null | undefined>;
+  trigger?: React.ReactNode;
+  placement?: "top" | "bottom";
+  align?: "left" | "right";
+  triggerClassName?: string;
+  triggerStyle?: React.CSSProperties;
+}) {
   const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState<{ top?: number; bottom?: number; left?: number; right?: number } | null>(null);
+  const [pos, setPos] = useState<{
+    top?: number;
+    bottom?: number;
+    left?: number;
+    right?: number;
+  } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    const h = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
+    };
     const s = () => setOpen(false);
     document.addEventListener("mousedown", h);
     window.addEventListener("scroll", s, true);
-    return () => { document.removeEventListener("mousedown", h); window.removeEventListener("scroll", s, true); };
+    return () => {
+      document.removeEventListener("mousedown", h);
+      window.removeEventListener("scroll", s, true);
+    };
   }, []);
   const toggle = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -533,30 +749,66 @@ export function Menu({ items, trigger, placement = "bottom", align = "right", tr
       // to — "left" so it lines up under the avatar (a wide, left-anchored
       // row like the account card), "right" so it doesn't overshoot the
       // right edge of a narrow trigger like a "..." icon button.
-      const side = align === "left" ? { left: Math.max(10, r.left) } : { right: Math.max(10, window.innerWidth - r.right) };
+      const side =
+        align === "left"
+          ? { left: Math.max(10, r.left) }
+          : { right: Math.max(10, window.innerWidth - r.right) };
       // `bottom` anchors to the trigger's top edge and grows upward — unlike
       // `top`, it needs no advance knowledge of the menu's own height, which
       // React hasn't rendered yet at the moment this position is computed.
-      setPos(placement === "top"
-        ? { bottom: window.innerHeight - r.top + 6, ...side }
-        : { top: r.bottom + 6, ...side });
+      setPos(
+        placement === "top"
+          ? { bottom: window.innerHeight - r.top + 6, ...side }
+          : { top: r.bottom + 6, ...side },
+      );
     }
     setOpen((o) => !o);
   };
   return (
     <div className="menuwrap" ref={ref}>
-      <div onClick={toggle} className={triggerClassName} style={triggerStyle ?? { cursor: "pointer", display: "inline-flex" }}>
-        {trigger || <button className="muted" style={{ padding: 4 }}><Icon n="menu" s={18} /></button>}
+      <div
+        onClick={toggle}
+        className={triggerClassName}
+        style={triggerStyle ?? { cursor: "pointer", display: "inline-flex" }}
+      >
+        {trigger || (
+          <button className="muted" style={{ padding: 4 }}>
+            <Icon n="menu" s={18} />
+          </button>
+        )}
       </div>
       {open && pos && (
-        <div className="menu" style={{ position: "fixed", top: pos.top, bottom: pos.bottom, left: pos.left, right: pos.right }}>
+        <div
+          className="menu"
+          style={{
+            position: "fixed",
+            top: pos.top,
+            bottom: pos.bottom,
+            left: pos.left,
+            right: pos.right,
+          }}
+        >
           {items.filter(Boolean).map((it, i) =>
             it === "-" ? (
               <hr key={i} className="divider" style={{ margin: "5px 4px" }} />
             ) : (
-              <div key={i} className={"mi" + ((it as MenuItem).danger ? " danger" : "") + ((it as MenuItem).off ? " off" : "")}
-                onClick={() => { const m = it as MenuItem; if (m.off) return; setOpen(false); m.fn?.(); }}>
-                {(it as MenuItem).ic && <Icon n={(it as MenuItem).ic!} s={15} />}
+              <div
+                key={i}
+                className={
+                  "mi" +
+                  ((it as MenuItem).danger ? " danger" : "") +
+                  ((it as MenuItem).off ? " off" : "")
+                }
+                onClick={() => {
+                  const m = it as MenuItem;
+                  if (m.off) return;
+                  setOpen(false);
+                  m.fn?.();
+                }}
+              >
+                {(it as MenuItem).ic && (
+                  <Icon n={(it as MenuItem).ic!} s={15} />
+                )}
                 {(it as MenuItem).t}
               </div>
             ),
@@ -573,8 +825,17 @@ export function ToastStack({ list }: { list: ToastMsg[] }) {
     <div className="toastwrap">
       {list.map((t) => (
         <div key={t.id} className={"toast " + (t.tone || "")}>
-          <Icon n={t.tone === "err" ? "x" : t.tone === "ok" ? "check" : "bell"} s={15}
-            c={t.tone === "err" ? "var(--coral-ink)" : t.tone === "ok" ? "var(--mint-ink)" : "var(--blueL-ink)"} />
+          <Icon
+            n={t.tone === "err" ? "x" : t.tone === "ok" ? "check" : "bell"}
+            s={15}
+            c={
+              t.tone === "err"
+                ? "var(--coral-ink)"
+                : t.tone === "ok"
+                  ? "var(--mint-ink)"
+                  : "var(--blueL-ink)"
+            }
+          />
           <span>{t.msg}</span>
           {t.actionLabel && <button onClick={t.action}>{t.actionLabel}</button>}
         </div>
@@ -595,7 +856,10 @@ export function ToastStack({ list }: { list: ToastMsg[] }) {
  * its own, for anywhere the wordmark would not fit.
  */
 export { FanationLogo as Logo, FanationMark } from "@/lib/brand";
-export type { FanationLogoProps as LogoProps, FanationMarkProps } from "@/lib/brand";
+export type {
+  FanationLogoProps as LogoProps,
+  FanationMarkProps,
+} from "@/lib/brand";
 
 /**
  * The picture resolvers, and the brand tables they read.
