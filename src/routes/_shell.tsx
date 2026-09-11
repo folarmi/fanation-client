@@ -6,6 +6,7 @@ import { FAN_NAV, FAN_TABS, STUDIO_NAV, STUDIO_TABS } from "@/components/nav";
 import { ThemeToggle } from "@/components/theme";
 import { ModalHost } from "@/components/modals";
 import RouteFallback from "@/components/route-fallback";
+import { useLogout } from "@/hooks/auth/use-logout";
 
 /**
  * One account, two modes: Browse (fan) ⇄ Studio (creator). Route prefix decides
@@ -20,6 +21,8 @@ import RouteFallback from "@/components/route-fallback";
 export default function AppLayout() {
   const pathname = useLocation().pathname;
   const navigate = useNavigate();
+  const handleLogout = useLogout();
+
   // const authed = useAppStore((s) => s.authed);
   const coins = useAppStore((s) => s.coins);
   const openModal = useAppStore((s) => s.openModal);
@@ -94,7 +97,15 @@ export default function AppLayout() {
           <>
             <Avatar name="Emmanuel Ekpenyong" size={38} />
             <div className="col grow" style={{ minWidth: 0 }}>
-              <span className="b6 t14 uname" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block" }}>
+              <span
+                className="b6 t14 uname"
+                style={{
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  display: "block",
+                }}
+              >
                 Emmanuel Ekpenyong
               </span>
               <span className="muted t12">@imanuelekpess</span>
@@ -107,7 +118,7 @@ export default function AppLayout() {
             t: "Log out @imanuelekpess",
             fn: () => {
               setAuthed(false);
-              navigate("/login");
+              handleLogout();
             },
           },
         ]}
@@ -162,8 +173,12 @@ export default function AppLayout() {
       <div className="main">
         <div className="topbar">
           {!isTopLevel && (
-            <button className="btn btn-ghost btn-sm" style={{ transform: "rotate(180deg)", flex: "none" }}
-              onClick={() => navigate(-1)} aria-label="Go back">
+            <button
+              className="btn btn-ghost btn-sm"
+              style={{ transform: "rotate(180deg)", flex: "none" }}
+              onClick={() => navigate(-1)}
+              aria-label="Go back"
+            >
               <Icon n="arrow" s={17} />
             </button>
           )}

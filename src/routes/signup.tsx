@@ -16,17 +16,14 @@ import {
 } from "@/services/features/auth/authSlice";
 
 import { SocialAuthButtons } from "@/components/auth/social-auth-buttons";
+import { useDeviceMetadata } from "@/hooks/auth/use-device-metadata";
 
 export default function Signup() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
+  const deviceMetadata = useDeviceMetadata();
 
-  const {
-    control,
-    handleSubmit,
-    watch,
-    formState: { isSubmitting },
-  } = useForm<SignupFormValues>({
+  const { control, handleSubmit, watch } = useForm<SignupFormValues>({
     mode: "onBlur",
     defaultValues: {
       firstName: "",
@@ -59,7 +56,6 @@ export default function Signup() {
   const signUpMutation = useCustomMutation({
     endpoint: "auth/register",
     successMessage: (data: any) => data?.data?.message,
-    // errorMessage: (error: any) => error,
     onSuccessCallback: (data) => {
       // toast("Kindly check your email for a verification link");
       dispatch(updateUserEmail(data?.data?.email));
@@ -82,7 +78,7 @@ export default function Signup() {
     <div className="authwrap">
       <AuthThemeToggle />
 
-      <div onSubmit={handleSubmit(submitForm)} className="authform">
+      <div className="authform">
         <div className="authinner">
           <div className="authbrand">
             <Logo />
@@ -115,7 +111,10 @@ export default function Signup() {
             onSubmit={handleSubmit(submitForm)}
             noValidate
           >
-            <SocialAuthButtons />
+            <SocialAuthButtons
+              endpoint="auth/login/oauth2"
+              {...deviceMetadata}
+            />
 
             <div className="authdiv">or with email</div>
 
@@ -205,6 +204,40 @@ export default function Signup() {
                 }}
               />
             </div>
+
+            <CustomInput<SignupFormValues>
+              name="dob"
+              id="signup-dob"
+              control={control}
+              type="date"
+              label="Date Of Birth"
+              placeholder="Select your date of birth"
+              max={new Date().toISOString().split("T")[0]}
+              className="auth-input-last"
+              rules={{
+                required: "Date of birth is required",
+                validate: (value) => {
+                  const birthDate = new Date(value);
+                  const today = new Date();
+
+                  if (birthDate > today) {
+                    return "Date of birth cannot be in the future";
+                  }
+
+                  let age = today.getFullYear() - birthDate.getFullYear();
+                  const m = today.getMonth() - birthDate.getMonth();
+
+                  if (
+                    m < 0 ||
+                    (m === 0 && today.getDate() < birthDate.getDate())
+                  ) {
+                    age--;
+                  }
+
+                  return age >= 18 || "You must be at least 18 years old";
+                },
+              }}
+            />
 
             <CustomInput<SignupFormValues>
               name="password"
@@ -298,9 +331,11 @@ export default function Signup() {
             <button
               type="submit"
               className="btn btn-blue btn-block"
-              disabled={isSubmitting}
+              disabled={signUpMutation.isPending}
             >
-              {isSubmitting ? "Creating account..." : "Create Account"}
+              {signUpMutation.isPending
+                ? "Creating account..."
+                : "Create Account"}
             </button>
 
             <div

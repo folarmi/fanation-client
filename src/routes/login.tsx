@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { useDispatch } from "react-redux";
+// import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 
 import { AuthHero, AuthLegal } from "@/components/auth";
@@ -8,11 +8,17 @@ import { SocialAuthButtons } from "@/components/auth/social-auth-buttons";
 import CustomInput from "@/components/custom-input";
 import { AuthThemeToggle } from "@/components/theme";
 import { useCustomMutation } from "@/hooks/api/use-api";
-import { useAppStore } from "@/lib/core";
+// import { useAppStore } from "@/lib/core";
 import { Logo } from "@/lib/ui";
-import { updateUserObject } from "@/services/features/auth/authSlice";
-import { getDeviceOS } from "@/utils/helper";
-import { showErrorToast, showToast } from "@/utils/toastUtils";
+// import { updateUserObject } from "@/services/features/auth/authSlice";
+import {
+  fetchDeviceIP,
+  getBrowserInfo,
+  getDeviceOS,
+  getPlatformFromUAParser,
+  getReadableLocation,
+} from "@/utils/helper";
+import { showErrorToast } from "@/utils/toastUtils";
 import { useSignIn } from "@/hooks/auth/useSignIn";
 import { useDeviceMetadata } from "@/hooks/auth/use-device-metadata";
 import { getFCMToken } from "@/services/firebase";
@@ -33,8 +39,13 @@ type ResendVerificationVariables = {
 export default function Login() {
   const navigate = useNavigate();
   const deviceMetadata = useDeviceMetadata();
+  const platform = getPlatformFromUAParser();
+  const browser = getBrowserInfo();
 
+  const [ip, setIp] = useState<string>("");
   const [notVerifiedError, setNotVerifiedError] = useState(false);
+  const [location, setLocation] = useState<string>("");
+  const [, setError] = useState<string | null>(null);
 
   const { control, handleSubmit, getValues, register } =
     useForm<LoginFormValues>({
@@ -51,8 +62,29 @@ export default function Login() {
     endpoint: "auth/login",
   });
 
-  const dispatch = useDispatch();
-  const setAuthed = useAppStore((state) => state.setAuthed);
+  // const dispatch = useDispatch();
+  // const setAuthed = useAppStore((state) => state.setAuthed);
+
+  useEffect(() => {
+    const fetchIP = async () => {
+      const deviceIP = await fetchDeviceIP();
+      setIp(deviceIP);
+    };
+
+    fetchIP();
+  }, []);
+
+  useEffect(() => {
+    getReadableLocation()
+      .then((result) => {
+        if (result.success && result.location) {
+          setLocation(result.location);
+        } else {
+          setError(result.error || "Failed to get location");
+        }
+      })
+      .catch((err) => setError(err.message || "An unexpected error occurred"));
+  }, []);
 
   const resendVerificationMutation = useCustomMutation<
     unknown,
@@ -65,72 +97,96 @@ export default function Login() {
     successMessage: (data: any) => data?.message || "Verification email sent",
   });
 
-  const getNotificationToken = async () => {
-    if (!("Notification" in window)) {
-      return null;
-    }
+  // const onSubmit = async (values: LoginFormValues) => {
+  //   /*
+  //    * VITE_PUBLIC_BASE_URL is blank locally — there is no backend for
+  //    * `auth/login` to reach, so a real sign-in always fails here. This
+  //    * bypass stands in for it in dev builds only (`import.meta.env.DEV`
+  //    * is stripped from production bundles), accepting whatever the form
+  //    * was submitted with rather than a hardcoded credential.
+  //    */
+  //   if (import.meta.env.DEV) {
+  //     localStorage.setItem("token", "dev-preview-token");
+
+  //     const userObject = {
+  //       email: values.email,
+  //       role: "creator",
+  //       usid: "dev-preview",
+  //     };
+  //     localStorage.setItem("userObject", JSON.stringify(userObject));
+  //     dispatch(updateUserObject(userObject));
+  //     setAuthed(true);
+
+  //     window.dispatchEvent(new Event("auth-complete"));
+  //     navigate("/feed", { replace: true });
+  //     return;
+  //   }
+
+  //   const firebaseClientToken = await getNotificationToken();
+
+  //   signInMutation.mutate({
+  //     email: values.email,
+  //     password: values.password,
+
+  //     deviceMeta: {
+  //       deviceOS: getDeviceOS(),
+  //       deviceIP: deviceMetadata.ip,
+  //       location: deviceMetadata.location,
+  //       platform: deviceMetadata.platform,
+  //       browser: deviceMetadata.browser,
+  //       firebaseClientToken,
+  //     },
+  //   });
+  // };
+
+  const onSubmit = async (data: LoginFormValues) => {
+    let fcmToken = null;
 
     try {
+      // Check current permission
+
+      // If permission is blocked, inform user
       if (Notification.permission === "denied") {
-        showToast(
-          "Please enable notifications in your browser settings to receive updates.",
-          "warning",
+        console.warn(
+          "⚠️ Notification permission is blocked. User needs to enable it in browser settings.",
         );
 
-        return null;
-      }
-
-      if (Notification.permission === "default") {
+        showErrorToast({
+          type: "warning",
+          title:
+            "Please enable notifications in your browser settings to receive updates",
+        });
+      } else if (Notification.permission === "default") {
+        // Request permission if not yet asked
         const permission = await Notification.requestPermission();
+        console.log("Permission request result:", permission);
 
-        if (permission !== "granted") {
-          return null;
+        if (permission === "granted") {
+          fcmToken = await getFCMToken();
         }
+      } else if (Notification.permission === "granted") {
+        // Permission already granted
+        fcmToken = await getFCMToken();
       }
-
-      return await getFCMToken();
     } catch (error) {
-      console.error("Unable to retrieve FCM token:", error);
-      return null;
-    }
-  };
-
-  const onSubmit = async (values: LoginFormValues) => {
-    /*
-     * VITE_PUBLIC_BASE_URL is blank locally — there is no backend for
-     * `auth/login` to reach, so a real sign-in always fails here. This
-     * bypass stands in for it in dev builds only (`import.meta.env.DEV`
-     * is stripped from production bundles), accepting whatever the form
-     * was submitted with rather than a hardcoded credential.
-     */
-    if (import.meta.env.DEV) {
-      localStorage.setItem("token", "dev-preview-token");
-
-      const userObject = { email: values.email, role: "creator", usid: "dev-preview" };
-      localStorage.setItem("userObject", JSON.stringify(userObject));
-      dispatch(updateUserObject(userObject));
-      setAuthed(true);
-
-      window.dispatchEvent(new Event("auth-complete"));
-      navigate("/feed", { replace: true });
-      return;
+      console.error("Error getting FCM token:", error);
+      // Don't block login if FCM token fails
     }
 
-    const firebaseClientToken = await getNotificationToken();
-
-    signInMutation.mutate({
-      email: values.email,
-      password: values.password,
-
+    const formValues = {
+      email: data.email,
+      password: data.password,
       deviceMeta: {
         deviceOS: getDeviceOS(),
-        deviceIP: deviceMetadata.ip,
-        location: deviceMetadata.location,
-        platform: deviceMetadata.platform,
-        browser: deviceMetadata.browser,
-        firebaseClientToken,
+        deviceIP: ip,
+        location: location,
+        platform: platform,
+        browser: browser,
+        firebaseClientToken: fcmToken,
       },
-    });
+    };
+
+    signInMutation?.mutate(formValues);
   };
 
   const resendVerificationEmail = () => {
@@ -315,3 +371,33 @@ export default function Login() {
     </div>
   );
 }
+
+// const getNotificationToken = async () => {
+//   if (!("Notification" in window)) {
+//     return null;
+//   }
+
+//   try {
+//     if (Notification.permission === "denied") {
+//       showToast(
+//         "Please enable notifications in your browser settings to receive updates.",
+//         "warning",
+//       );
+
+//       return null;
+//     }
+
+//     if (Notification.permission === "default") {
+//       const permission = await Notification.requestPermission();
+
+//       if (permission !== "granted") {
+//         return null;
+//       }
+//     }
+
+//     return await getFCMToken();
+//   } catch (error) {
+//     console.error("Unable to retrieve FCM token:", error);
+//     return null;
+//   }
+// };

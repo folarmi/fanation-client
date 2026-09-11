@@ -161,6 +161,27 @@ const isEmptyErrorMessage = (message: ApiErrorMessage): boolean => {
   return Object.keys(message).length === 0;
 };
 
+function extractBackendMessage(error: unknown): string | undefined {
+  // Case 1: AxiosError with a response body (non-2xx status)
+  if (isAxiosErrorLike(error)) {
+    const data = error.response?.data as any;
+    return data?.message || data?.data?.message;
+  }
+
+  // Case 2: Error thrown manually from mutationFn (200 but logically failed)
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return undefined;
+}
+
+function isAxiosErrorLike(
+  error: unknown,
+): error is { response?: { data?: unknown } } {
+  return typeof error === "object" && error !== null && "response" in error;
+}
+
 export const useCustomMutation = <
   TData = MutationResponse,
   TError = AxiosError,
@@ -245,18 +266,23 @@ export const useCustomMutation = <
       let message: ApiErrorMessage;
 
       try {
-        message = errorMessage?.(error) ?? getApiErrors(error);
+        message =
+          errorMessage?.(error) ??
+          extractBackendMessage(error) ??
+          getApiErrors(error);
       } catch (messageError) {
         console.error("Failed to process custom API error:", messageError);
-
         message = getApiErrors(error);
       }
 
-      if (isEmptyErrorMessage(message)) {
-        message = "An unexpected error occurred";
+      try {
+        if (isEmptyErrorMessage(message)) {
+          message = "An unexpected error occurred";
+        }
+        showErrorToast(message);
+      } catch (toastError) {
+        console.error("Toast pipeline crashed:", toastError);
       }
-
-      showErrorToast(message);
 
       await userOnError?.(...args);
     },
