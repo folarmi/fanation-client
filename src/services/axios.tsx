@@ -39,6 +39,7 @@ function isAuthUrl(url?: string) {
     url?.includes("waitlist/join") ||
     url?.includes("auth/refresh") ||
     url?.includes("auth/forgot-password") ||
+    url?.includes("auth/resend-verification-link") ||
     url?.includes("auth/reset-password")
   );
 }

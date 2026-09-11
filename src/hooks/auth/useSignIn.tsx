@@ -171,8 +171,6 @@ export const useSignIn = ({
     errorMessage: (error) => getAuthErrorMessage(error),
 
     onSuccessCallback: (data) => {
-      console.log("✅ [useSignIn] Backend response:", data);
-
       setNotVerifiedError(false);
       setErrorMessage?.(null);
 

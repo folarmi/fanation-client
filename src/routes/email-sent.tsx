@@ -24,16 +24,25 @@ export default function EmailSent() {
   const emailType = useAppSelector((s) => s.auth.emailType);
   const isReset = emailType === "Reset";
 
-  const resendMutation = useCustomMutation<unknown, unknown, ResendVariables>({
-    endpoint: isReset ? "auth/forgot-password" : "auth/resend-verification-link",
-    method: "post",
-    useQueryParams: true,
-    successMessage: () => (isReset ? "Reset link sent" : "Verification email sent"),
+  // const resendMutation = useCustomMutation<unknown, unknown, ResendVariables>({
+  //   endpoint: isReset ? "auth/forgot-password" : "auth/resend-verification-link",
+  //   method: "post",
+  //   useQueryParams: true,
+  //   successMessage: () => (isReset ? "Reset link sent" : "Verification email sent"),
+  // });
+
+  const resendMutation = useCustomMutation({
+    endpoint: `auth/resend-verification-link?email=${email}`,
+    successMessage: (data: any) => data?.message,
+    errorMessage: (error: any) => {
+      console.log(error);
+    },
+    onSuccessCallback: () => {},
   });
 
   const resend = () => {
     if (!email) return;
-    resendMutation.mutate({ params: { email }, body: {} });
+    resendMutation.mutate({});
   };
 
   return (
@@ -49,7 +58,10 @@ export default function EmailSent() {
           <div className="card" style={{ padding: 26, textAlign: "center" }}>
             <div
               className="feature-ic"
-              style={{ background: "rgba(37,153,246,.16)", margin: "0 auto 18px" }}
+              style={{
+                background: "rgba(37,153,246,.16)",
+                margin: "0 auto 18px",
+              }}
             >
               <Icon n="send" c="var(--blueL-ink)" s={20} />
             </div>
@@ -58,11 +70,15 @@ export default function EmailSent() {
               {isReset ? "Reset your password" : "Verify your email"}
             </div>
 
-            <div className="muted t14" style={{ marginBottom: 22, lineHeight: 1.55 }}>
+            <div
+              className="muted t14"
+              style={{ marginBottom: 22, lineHeight: 1.55 }}
+            >
               {email ? (
                 <>
-                  We&apos;ve sent a {isReset ? "password reset" : "verification"}{" "}
-                  link to <b style={{ color: "var(--gray-12)" }}>{email}</b>.
+                  We&apos;ve sent a{" "}
+                  {isReset ? "password reset" : "verification"} link to{" "}
+                  <b style={{ color: "var(--gray-12)" }}>{email}</b>.
                   {isReset
                     ? " Click it to choose a new password."
                     : " Click it to activate your account."}
