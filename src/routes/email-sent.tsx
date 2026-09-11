@@ -6,11 +6,6 @@ import { useCustomMutation } from "@/hooks/api/use-api";
 import { useAppSelector } from "@/services/hook";
 import { Icon, Logo } from "@/lib/ui";
 
-type ResendVariables = {
-  params: { email: string };
-  body: Record<string, never>;
-};
-
 /**
  * Shared "check your inbox" landing spot for both flows that end with a
  * link mailed to the user — signup (verify) and forgot-password (reset).
@@ -23,13 +18,6 @@ export default function EmailSent() {
   const email = useAppSelector((s) => s.auth.userEmail);
   const emailType = useAppSelector((s) => s.auth.emailType);
   const isReset = emailType === "Reset";
-
-  // const resendMutation = useCustomMutation<unknown, unknown, ResendVariables>({
-  //   endpoint: isReset ? "auth/forgot-password" : "auth/resend-verification-link",
-  //   method: "post",
-  //   useQueryParams: true,
-  //   successMessage: () => (isReset ? "Reset link sent" : "Verification email sent"),
-  // });
 
   const resendMutation = useCustomMutation({
     endpoint: `auth/resend-verification-link?email=${email}`,

@@ -210,6 +210,40 @@ export const useCustomMutation = <
     ...nestedMutationOptions,
     ...baseMutationOptions,
 
+    // mutationFn: async (variables: TVariables): Promise<TData> => {
+    //   let finalEndpoint = endpoint;
+    //   let requestData: unknown = variables;
+
+    //   if (useQueryParams && isRecord(variables)) {
+    //     const queryParams = variables[queryParamsKey];
+
+    //     if (isRecord(queryParams)) {
+    //       finalEndpoint = addQueryParams(endpoint, queryParams);
+    //     }
+
+    //     requestData = Object.prototype.hasOwnProperty.call(variables, bodyKey)
+    //       ? variables[bodyKey]
+    //       : undefined;
+    //   }
+
+    //   const response = await api.request<TData>({
+    //     url: finalEndpoint,
+    //     method,
+    //     headers: {
+    //       "Content-Type": contentType,
+    //     },
+
+    //     // GET requests should not send a body.
+    //     ...(method !== "get"
+    //       ? {
+    //           data: requestData,
+    //         }
+    //       : {}),
+    //   });
+
+    //   return response.data;
+    // },
+
     mutationFn: async (variables: TVariables): Promise<TData> => {
       let finalEndpoint = endpoint;
       let requestData: unknown = variables;
@@ -240,6 +274,40 @@ export const useCustomMutation = <
             }
           : {}),
       });
+
+      // Some backend responses return HTTP 200 + `success: true` even when
+      // the operation actually failed (e.g. an expired token) — the real
+      // outcome lives in the envelope's own `statusCode`, which is negative
+      // on failure regardless of the HTTP status or the `success` flag.
+      // Normalize that here so isSuccess/isError reflect the true outcome
+      // everywhere this hook is used, instead of every caller re-checking
+      // the envelope by hand.
+      const envelope = response.data as unknown as
+        | { statusCode?: number; message?: string }
+        | undefined;
+
+      const isBusinessError =
+        typeof envelope?.statusCode === "number" && envelope.statusCode < 0;
+
+      if (isBusinessError) {
+        const error = new Error(
+          envelope?.message || "Request failed",
+        ) as Error & { response?: unknown; isAxiosError?: boolean };
+
+        // Mimic the AxiosError shape so extractBackendMessage/getApiErrors
+        // and any error?.response?.data?.message lookups keep working
+        // unchanged.
+        error.isAxiosError = true;
+        error.response = {
+          data: response.data,
+          status: response.status,
+          statusText: response.statusText,
+          headers: response.headers,
+          config: response.config,
+        };
+
+        throw error;
+      }
 
       return response.data;
     },
