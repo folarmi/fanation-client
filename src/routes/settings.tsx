@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useAppStore } from "@/lib/core";
 import { Icon } from "@/lib/ui";
-import { useLogout } from "@/hooks/auth/use-logout";
 
 const TOGGLES = [
   ["Push notifications", "Gifts, subs, and replies"],
@@ -14,7 +13,6 @@ const TOGGLES = [
 
 export default function SettingsPage() {
   const S = useAppStore();
-  const handleLogout = useLogout();
 
   const [tg, setTg] = useState<Record<string, boolean>>({
     "Push notifications": true,
@@ -83,10 +81,13 @@ export default function SettingsPage() {
           <div
             className="row gap12"
             style={{ padding: "14px 18px", cursor: "pointer" }}
+            onClick={() => S.openModal("logout")}
           >
-            <Icon n="logout" s={17} c="var(--muted)" onClick={handleLogout} />
+            <Icon n="logout" s={17} c="var(--muted)" />
             <span className="t14 b6">Log out</span>
           </div>
+          <hr className="divider" />
+
           <hr className="divider" />
           <div
             className="row gap12"
