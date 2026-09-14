@@ -1,7 +1,14 @@
 import { create } from "zustand";
 import { SEED_FEED, TX_SEED } from "./data";
 import { readStoredTheme, writeStoredTheme } from "./theme-storage";
-import type { ModalState, PayoutReq, PollOpt, Post, ToastMsg, TxItem } from "./types";
+import type {
+  ModalState,
+  PayoutReq,
+  PollOpt,
+  Post,
+  ToastMsg,
+  TxItem,
+} from "./types";
 
 /**
  * Fan/Creator app store.
@@ -46,7 +53,12 @@ export interface AppState {
   // actions
   setAuthed(v: boolean): void;
   setTheme(t: "dark" | "light"): void;
-  toast(msg: string, tone?: "ok" | "err" | "", actionLabel?: string, action?: () => void): void;
+  toast(
+    msg: string,
+    tone?: "ok" | "err" | "",
+    actionLabel?: string,
+    action?: () => void,
+  ): void;
   openModal(t: ModalState["t"], d?: unknown): void;
   closeModal(): void;
   spend(amt: number, label: string): boolean;
@@ -66,7 +78,14 @@ export interface AppState {
   block(handle: string): void;
   report(id: string, reason: string): void;
   addComment(id: string, text: string): void;
-  addPost(p: { text: string; media?: boolean; poll?: PollOpt[]; vis?: string; when?: string | null; price?: number }): void;
+  addPost(p: {
+    text: string;
+    media?: boolean;
+    poll?: PollOpt[];
+    vis?: string;
+    when?: string | null;
+    price?: number;
+  }): void;
   delPost(id: string): void;
   markNotifsRead(): void;
   sendDm(threadKey: string, text: string): void;
@@ -103,7 +122,14 @@ export const useAppStore = create<AppState>()((set, get) => ({
   subs: { sofiaa: true, marcusbeats: true, elenalive: true },
   /* Following is free and subscribing is not, so the two lists overlap without
      matching — this account follows six creators and pays three of them. */
-  follows: { sofiaa: true, aishab: true, lenaart: true, zaraali: true, leochef: true, noahk: true },
+  follows: {
+    sofiaa: true,
+    aishab: true,
+    lenaart: true,
+    zaraali: true,
+    leochef: true,
+    noahk: true,
+  },
   hidden: {},
   muted: {},
   blocked: {},
@@ -127,8 +153,13 @@ export const useAppStore = create<AppState>()((set, get) => ({
 
   toast: (msg, tone = "", actionLabel, action) => {
     const id = uid();
-    set((s) => ({ toasts: [...s.toasts, { id, msg, tone, actionLabel, action }] }));
-    setTimeout(() => set((s) => ({ toasts: s.toasts.filter((x) => x.id !== id) })), 3400);
+    set((s) => ({
+      toasts: [...s.toasts, { id, msg, tone, actionLabel, action }],
+    }));
+    setTimeout(
+      () => set((s) => ({ toasts: s.toasts.filter((x) => x.id !== id) })),
+      3400,
+    );
   },
 
   openModal: (t, d) => set({ modal: { t, d } }),
@@ -143,7 +174,16 @@ export const useAppStore = create<AppState>()((set, get) => ({
     }
     set((s) => ({
       coins: s.coins - amt,
-      walletTx: [{ t: label, s: "Coins", a: "", d: "Just now", coin: `-${amt.toLocaleString()}` }, ...s.walletTx],
+      walletTx: [
+        {
+          t: label,
+          s: "Coins",
+          a: "",
+          d: "Just now",
+          coin: `-${amt.toLocaleString()}`,
+        },
+        ...s.walletTx,
+      ],
     }));
     return true;
   },
@@ -152,34 +192,70 @@ export const useAppStore = create<AppState>()((set, get) => ({
   buyCoins: (amt, usd) => {
     set((s) => ({
       coins: s.coins + amt,
-      walletTx: [{ t: `Coin pack — ${amt.toLocaleString()} coins`, s: "Card · Paystack", a: `-${usd}.00`, d: "Just now", coin: `+${amt.toLocaleString()}` }, ...s.walletTx],
+      walletTx: [
+        {
+          t: `Coin pack — ${amt.toLocaleString()} coins`,
+          s: "Card · Paystack",
+          a: `-${usd}.00`,
+          d: "Just now",
+          coin: `+${amt.toLocaleString()}`,
+        },
+        ...s.walletTx,
+      ],
     }));
     get().toast(`${amt.toLocaleString()} coins added to your wallet`, "ok");
   },
 
   // POST /tips
   tipUsd: (v, handle) => {
-    set((s) => ({ walletTx: [{ t: `Tip to @${handle}`, s: "Card · Paystack", a: `-$${v}.00`, d: "Just now", coin: "" }, ...s.walletTx] }));
+    set((s) => ({
+      walletTx: [
+        {
+          t: `Tip to @${handle}`,
+          s: "Card · Paystack",
+          a: `-$${v}.00`,
+          d: "Just now",
+          coin: "",
+        },
+        ...s.walletTx,
+      ],
+    }));
     get().toast(`$${v} tip sent to @${handle} 💛`, "ok");
   },
 
   payoutError: (amt) =>
-    amt < 50 ? "Minimum payout is $50" : amt > 4280 ? "Exceeds your available balance ($4,280)" : null,
+    amt < 50
+      ? "Minimum payout is $50"
+      : amt > 4280
+        ? "Exceeds your available balance ($4,280)"
+        : null,
 
   // POST /payouts
   requestPayout: (amt) => {
-    set((s) => ({ payoutReqs: [{ amt, st: "Pending review", d: "Just now" }, ...s.payoutReqs] }));
-    get().toast(`Payout of $${amt.toLocaleString()} requested — arrives in 1–3 business days`, "ok");
+    set((s) => ({
+      payoutReqs: [
+        { amt, st: "Pending review", d: "Just now" },
+        ...s.payoutReqs,
+      ],
+    }));
+    get().toast(
+      `Payout of $${amt.toLocaleString()} requested — arrives in 1–3 business days`,
+      "ok",
+    );
   },
 
   // POST /posts/:id/like
-  toggleLike: (id) => set((s) => ({ liked: { ...s.liked, [id]: !s.liked[id] } })),
+  toggleLike: (id) =>
+    set((s) => ({ liked: { ...s.liked, [id]: !s.liked[id] } })),
 
   // POST /posts/:id/save
   toggleSave: (id) => {
     const on = !get().saved[id];
     set((s) => ({ saved: { ...s.saved, [id]: on } }));
-    get().toast(on ? "Saved to your collection" : "Removed from your collection", on ? "ok" : "");
+    get().toast(
+      on ? "Saved to your collection" : "Removed from your collection",
+      on ? "ok" : "",
+    );
   },
 
   // POST /polls/:id/vote — one vote per user, enforced client + server
@@ -213,7 +289,10 @@ export const useAppStore = create<AppState>()((set, get) => ({
   toggleFollow: (handle) => {
     const was = get().follows[handle];
     set((s) => ({ follows: { ...s.follows, [handle]: !was } }));
-    get().toast(was ? `Unfollowed @${handle}` : `Following @${handle}`, was ? "" : "ok");
+    get().toast(
+      was ? `Unfollowed @${handle}` : `Following @${handle}`,
+      was ? "" : "ok",
+    );
   },
 
   // POST /posts/:id/hide
@@ -227,16 +306,22 @@ export const useAppStore = create<AppState>()((set, get) => ({
   // POST /users/:handle/mute
   mute: (handle) => {
     set((s) => ({ muted: { ...s.muted, [handle]: true } }));
-    get().toast(`Muted @${handle} — their posts won't appear in your feed`, "", "Undo", () =>
-      set((s) => ({ muted: drop(s.muted, handle) })),
+    get().toast(
+      `Muted @${handle} — their posts won't appear in your feed`,
+      "",
+      "Undo",
+      () => set((s) => ({ muted: drop(s.muted, handle) })),
     );
   },
 
   // POST /users/:handle/block
   block: (handle) => {
     set((s) => ({ blocked: { ...s.blocked, [handle]: true } }));
-    get().toast(`Blocked @${handle} — they can't see your profile or message you`, "err", "Undo", () =>
-      set((s) => ({ blocked: drop(s.blocked, handle) })),
+    get().toast(
+      `Blocked @${handle} — they can't see your profile or message you`,
+      "err",
+      "Undo",
+      () => set((s) => ({ blocked: drop(s.blocked, handle) })),
     );
   },
 
@@ -248,7 +333,9 @@ export const useAppStore = create<AppState>()((set, get) => ({
 
   // POST /posts/:id/comments
   addComment: (id, text) =>
-    set((s) => ({ comments: { ...s.comments, [id]: [...(s.comments[id] ?? []), text] } })),
+    set((s) => ({
+      comments: { ...s.comments, [id]: [...(s.comments[id] ?? []), text] },
+    })),
 
   // POST /posts
   addPost: (p) => {
@@ -271,7 +358,10 @@ export const useAppStore = create<AppState>()((set, get) => ({
       price: p.price,
     };
     set((s) => ({ myPosts: [post, ...s.myPosts] }));
-    get().toast(p.when ? `Scheduled for ${p.when}` : "Posted to your feed", "ok");
+    get().toast(
+      p.when ? `Scheduled for ${p.when}` : "Posted to your feed",
+      "ok",
+    );
   },
 
   // DELETE /posts/:id
@@ -288,7 +378,9 @@ export const useAppStore = create<AppState>()((set, get) => ({
 
   // POST /dms/:thread/messages
   sendDm: (threadKey, text) =>
-    set((s) => ({ dms: { ...s.dms, [threadKey]: [...(s.dms[threadKey] ?? []), text] } })),
+    set((s) => ({
+      dms: { ...s.dms, [threadKey]: [...(s.dms[threadKey] ?? []), text] },
+    })),
 
   // POST /dms/:thread/unlock
   unlockDm: (threadKey) => {

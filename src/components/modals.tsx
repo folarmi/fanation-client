@@ -697,7 +697,13 @@ function LogoutModal() {
         <button className="btn btn-ghost grow" onClick={closeModal}>
           Cancel
         </button>
-        <button className="btn btn-red grow" onClick={handleLogout}>
+        <button
+          className="btn btn-red grow"
+          onClick={() => {
+            handleLogout();
+            closeModal();
+          }}
+        >
           Log out
         </button>
       </div>

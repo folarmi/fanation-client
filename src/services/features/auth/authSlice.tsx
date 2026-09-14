@@ -1,14 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { UserObject } from "@/utils/types";
 import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
 
 type EmailType = "Reset" | "Signup" | null;
-
-export interface UserObject {
-  email: string;
-  role: string;
-  usid: string;
-}
 
 export interface AuthState {
   userEmail: string | null;
