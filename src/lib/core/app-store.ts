@@ -26,8 +26,14 @@ export interface AppState {
   authed: boolean;
   theme: "dark" | "light";
   profile: {
-    name: string;
+    fullName: string;
+    name: string; // display name — what the sidebar, profile header and @mentions show
     handle: string;
+    email: string;
+    gender: string;
+    location: string;
+    interest: string;
+    bio: string;
     avatarUrl?: string;
     coverUrl?: string;
   };
@@ -116,7 +122,16 @@ export const useAppStore = create<AppState>()((set, get) => ({
   /* Matches the identity the sidebar's account card and the settings/logout
      copy already showed before this was editable — changing it here is the
      only place that needs to change now that both read from the store. */
-  profile: { name: "Emmanuel Ekpenyong", handle: "imanuelekpess" },
+  profile: {
+    fullName: "Emmanuel Ekpenyong",
+    name: "Emmanuel Ekpenyong",
+    handle: "imanuelekpess",
+    email: "emmanuel.ekpenyong@fanation.app",
+    gender: "Prefer not to say",
+    location: "Lagos, Nigeria",
+    interest: "",
+    bio: "",
+  },
   coins: 12400,
   walletTx: [],
   payoutReqs: [],
