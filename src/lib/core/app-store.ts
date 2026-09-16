@@ -25,6 +25,12 @@ export interface AppState {
   // session
   authed: boolean;
   theme: "dark" | "light";
+  profile: {
+    name: string;
+    handle: string;
+    avatarUrl?: string;
+    coverUrl?: string;
+  };
   // wallet
   coins: number;
   walletTx: TxItem[];
@@ -53,6 +59,7 @@ export interface AppState {
   // actions
   setAuthed(v: boolean): void;
   setTheme(t: "dark" | "light"): void;
+  updateProfile(p: Partial<AppState["profile"]>): void;
   toast(
     msg: string,
     tone?: "ok" | "err" | "",
@@ -106,6 +113,10 @@ export const useAppStore = create<AppState>()((set, get) => ({
      key, so React mounts agreeing with what is on screen instead of correcting
      it. Everything else in this store is session state and stays in memory. */
   theme: readStoredTheme(),
+  /* Matches the identity the sidebar's account card and the settings/logout
+     copy already showed before this was editable — changing it here is the
+     only place that needs to change now that both read from the store. */
+  profile: { name: "Emmanuel Ekpenyong", handle: "imanuelekpess" },
   coins: 12400,
   walletTx: [],
   payoutReqs: [],
@@ -149,6 +160,14 @@ export const useAppStore = create<AppState>()((set, get) => ({
   setTheme: (t) => {
     writeStoredTheme(t);
     set({ theme: t });
+  },
+
+  // PATCH /me (avatar/cover would be a separate multipart POST /me/avatar,
+  // /me/cover at integration — held as data URLs here since nothing but this
+  // session ever needs to read them back)
+  updateProfile: (p) => {
+    set((s) => ({ profile: { ...s.profile, ...p } }));
+    get().toast("Profile updated", "ok");
   },
 
   toast: (msg, tone = "", actionLabel, action) => {

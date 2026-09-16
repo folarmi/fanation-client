@@ -88,6 +88,7 @@ import statsChartSolid from "@/assets/icons/stats-chart.svg?raw";
 import shieldCheckmarkSolid from "@/assets/icons/shield-checkmark.svg?raw";
 import cameraSolid from "@/assets/icons/camera.svg?raw";
 import calendarSolid from "@/assets/icons/calendar.svg?raw";
+import personSolid from "@/assets/icons/person.svg?raw";
 
 const inner = (raw: string) =>
   raw.replace(/^<svg[^>]*>/, "").replace(/<\/svg>\s*$/, "");
@@ -171,6 +172,7 @@ const SOLID: Record<string, string> = {
   shield: inner(shieldCheckmarkSolid),
   camera: inner(cameraSolid),
   cal: inner(calendarSolid),
+  user: inner(personSolid),
 };
 
 export function Icon({

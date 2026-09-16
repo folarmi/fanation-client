@@ -447,16 +447,10 @@ export default function FeedPage() {
               <div className="row gap10">
                 <button
                   className="btn btn-ghost btn-sm"
-                  onClick={() => navigate("/live")}
+                  onClick={() => navigate("/studio/live")}
                 >
                   <Icon n="live" s={15} c="var(--coral-ink)" solid />
                   Go Live
-                </button>
-                <button
-                  className="btn btn-blue btn-sm"
-                  onClick={() => S.openModal("compose")}
-                >
-                  Post
                 </button>
               </div>
             </div>
@@ -585,7 +579,7 @@ export default function FeedPage() {
                       overflow: "hidden",
                       cursor: "pointer",
                     }}
-                    onClick={() => navigate("/live")}
+                    onClick={() => navigate(`/live/${c.handle}`)}
                   >
                     <Photo
                       sizes={SIZES.rail}

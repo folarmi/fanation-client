@@ -23,8 +23,10 @@ export default function AppLayout() {
 
   // const authed = useAppStore((s) => s.authed);
   const coins = useAppStore((s) => s.coins);
+  const profile = useAppStore((s) => s.profile);
   const openModal = useAppStore((s) => s.openModal);
   const [menu, setMenu] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
 
   const studio = pathname.startsWith("/studio");
   /* Reels is the one route that wants the whole window. The sidebar stays — every
@@ -33,6 +35,13 @@ export default function AppLayout() {
      (`--side-w`, in styles.css). Instagram collapses its own nav here for the
      same reason. Nothing else in the shell changes. */
   const immersive = pathname === "/reels";
+  /* Same icon-rail treatment reels gets automatically, just user-triggered —
+     a grid page (Live, Explore) wants the width back without switching routes.
+     `.immersive` is what actually drives the CSS; reusing it here means the
+     collapse toggle needs no styles of its own. Reels ignores the toggle
+     entirely (it renders only when `!immersive`), so `railMode` there is
+     always exactly `immersive`. */
+  const railMode = immersive || collapsed;
   const nav = studio ? STUDIO_NAV : FAN_NAV;
   const tabs = studio ? STUDIO_TABS : FAN_TABS;
   /* A back arrow only earns its place on a page someone drilled into — a
@@ -92,7 +101,7 @@ export default function AppLayout() {
         triggerStyle={{ padding: 12, width: "100%", cursor: "pointer" }}
         trigger={
           <>
-            <Avatar name="Emmanuel Ekpenyong" size={38} />
+            <Avatar name={profile.name} size={38} src={profile.avatarUrl} />
             <div className="col grow" style={{ minWidth: 0 }}>
               <span
                 className="b6 t14 uname"
@@ -103,16 +112,16 @@ export default function AppLayout() {
                   display: "block",
                 }}
               >
-                Emmanuel Ekpenyong
+                {profile.name}
               </span>
-              <span className="muted t12">@imanuelekpess</span>
+              <span className="muted t12">@{profile.handle}</span>
             </div>
             <Icon n="more" s={17} c="var(--muted)" />
           </>
         }
         items={[
           {
-            t: "Log out @imanuelekpess",
+            t: `Log out @${profile.handle}`,
             fn: () => openModal("logout"),
           },
         ]}
@@ -147,18 +156,33 @@ export default function AppLayout() {
   );
 
   return (
-    <div className={"app" + (immersive ? " immersive" : "")}>
+    <div className={"app" + (railMode ? " immersive" : "")}>
       <div className="side">
         <div className="sidelogo">
-          {immersive ? <FanationMark size={30} title="Fanation" /> : <Logo />}
+          {railMode ? <FanationMark size={30} title="Fanation" /> : <Logo />}
         </div>
+        {!immersive && (
+          <button
+            className="navi"
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            onClick={() => setCollapsed((v) => !v)}
+          >
+            <span
+              className="row"
+              style={{ transform: collapsed ? undefined : "rotate(180deg)" }}
+            >
+              <Icon n="chevronRight" s={18} />
+            </span>
+            <span className="navlabel">Collapse</span>
+          </button>
+        )}
         <div className="col gap4 grow">
           <div className="col gap6" style={{ overflowY: "auto" }}>
             {navLinks}
           </div>
-          {!immersive && <div style={{ marginTop: 12 }}>{switchButton}</div>}
+          {!railMode && <div style={{ marginTop: 12 }}>{switchButton}</div>}
         </div>
-        {immersive ? accountRail : account}
+        {railMode ? accountRail : account}
       </div>
 
       <div className="main">

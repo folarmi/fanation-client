@@ -18,9 +18,11 @@ import ProtectedRoute from "./protected-route";
  */
 const routeLoaders = {
   feed: () => import("@/routes/feed"),
+  profile: () => import("@/routes/profile"),
   explore: () => import("@/routes/explore"),
   reels: () => import("@/routes/reels"),
   live: () => import("@/routes/live"),
+  liveStream: () => import("@/routes/live-stream"),
   messages: () => import("@/routes/messages"),
   notifications: () => import("@/routes/notifications"),
   collections: () => import("@/routes/collections"),
@@ -44,9 +46,11 @@ const routeLoaders = {
 };
 
 const FeedPage = lazy(routeLoaders.feed);
+const ProfilePage = lazy(routeLoaders.profile);
 const ExplorePage = lazy(routeLoaders.explore);
 const ReelsPage = lazy(routeLoaders.reels);
 const LivePage = lazy(routeLoaders.live);
+const LiveStreamPage = lazy(routeLoaders.liveStream);
 const MessagesPage = lazy(routeLoaders.messages);
 const NotificationsPage = lazy(routeLoaders.notifications);
 const CollectionsPage = lazy(routeLoaders.collections);
@@ -96,11 +100,15 @@ export default function AppRoutes() {
           {/* Fan surface */}
           <Route path="/feed" element={<FeedPage />} />
 
+          <Route path="/profile" element={<ProfilePage />} />
+
           <Route path="/explore" element={<ExplorePage />} />
 
           <Route path="/reels" element={<ReelsPage />} />
 
           <Route path="/live" element={<LivePage />} />
+
+          <Route path="/live/:handle" element={<LiveStreamPage />} />
 
           <Route path="/messages" element={<MessagesPage />} />
 
