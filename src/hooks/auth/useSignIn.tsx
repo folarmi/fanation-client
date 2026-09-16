@@ -2,7 +2,6 @@
 
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { v4 as uuidv4 } from "uuid";
 
 import { useCustomMutation } from "@/hooks/api/use-api";
 import { useAppStore } from "@/lib/core";
@@ -20,17 +19,6 @@ interface AuthUserObject {
   role?: string;
   usid?: string;
   [key: string]: unknown;
-}
-
-function bindSessionToTab() {
-  let tabId = sessionStorage.getItem("tab_id");
-
-  if (!tabId) {
-    tabId = uuidv4();
-    sessionStorage.setItem("tab_id", tabId);
-  }
-
-  localStorage.setItem("active_tab_id", tabId);
 }
 
 function getAuthErrorMessage(error: any): string {
@@ -124,8 +112,6 @@ export const useSignIn = ({
       }
 
       localStorage.setItem("userObject", JSON.stringify(userObject));
-
-      bindSessionToTab();
 
       dispatch(updateUserObject(userObject));
 

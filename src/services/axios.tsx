@@ -44,11 +44,15 @@ function isAuthUrl(url?: string) {
   );
 }
 
+let hasForcedLogout = false;
+
 function forceLogout() {
+  if (hasForcedLogout) return;
+  hasForcedLogout = true;
+
   localStorage.removeItem("token");
   localStorage.removeItem("refreshToken");
   localStorage.removeItem("userObject");
-  localStorage.removeItem("active_tab_id");
 
   delete api.defaults.headers.common.Authorization;
 
@@ -63,17 +67,6 @@ function forceLogout() {
 api.interceptors.request.use(
   (config) => {
     const isAuthEndpoint = isAuthUrl(config.url);
-
-    if (!isAuthEndpoint) {
-      const myTabId = sessionStorage.getItem("tab_id");
-      const activeTabId = localStorage.getItem("active_tab_id");
-      const isAuthorizedTab = myTabId && myTabId === activeTabId;
-
-      if (!isAuthorizedTab) {
-        window.dispatchEvent(new Event("unauthorized-tab"));
-        return Promise.reject(new Error("Unauthorized tab"));
-      }
-    }
 
     const token = localStorage.getItem("token");
 
@@ -105,40 +98,19 @@ api.interceptors.response.use(
 
     const status = error.response?.status;
 
-    const rawMessage =
-      error.response?.data?.message ||
-      error.response?.data?.error ||
-      error.response?.data?.error_message ||
-      error.message ||
-      "";
-
-    const message = String(rawMessage).toLowerCase();
-
     const isAuthEndpoint = isAuthUrl(originalRequest.url);
 
-    const isTokenExpired =
-      message.includes("token expired") ||
-      message.includes("invalid token") ||
-      message.includes("jwt expired") ||
-      message.includes("token is invalid") ||
-      message.includes("authentication failed") ||
-      message.includes("authorization time out") ||
-      message.includes("authorization timeout") ||
-      message.includes("authorization timed out") ||
-      message.includes("unauthorized") ||
-      message.includes("expired");
-
-    const isMissingAuth =
-      status === 400 && message.includes("missing authorization");
-
-    const isAuthFailure =
-      status === 401 || status === 403 || isMissingAuth || isTokenExpired;
+    // 401 = not authenticated (missing/invalid/expired token) - this is the
+    // only status that should ever trigger a logout/refresh flow.
+    // 403 = authenticated but not allowed to do this (a permissions issue) -
+    // it must NOT log the user out, or every "you can't do that" response
+    // would silently kill their session.
+    const isAuthFailure = status === 401;
 
     if (status === 401 || status === 403) {
       console.error(
-        `❌ [Axios Response] Auth error for ${originalRequest?.url}`,
+        `❌ [Axios Response] ${status} for ${originalRequest?.url}`,
       );
-      console.log("📦 Response data:", error.response?.data);
     }
 
     // Do not refresh/retry auth endpoints to avoid loops
@@ -154,13 +126,25 @@ api.interceptors.response.use(
     // Mark auth errors so your toast layer can ignore them if you use this flag
     originalRequest._skipAuthToast = true;
 
-    // If the request was already retried and still failed, logout
+    // If the request was already retried once and still 401'd, the session
+    // really is invalid - log out.
     if (originalRequest._retry) {
       forceLogout();
       return Promise.reject(error);
     }
 
     originalRequest._retry = true;
+
+    const refreshToken = localStorage.getItem("refreshToken");
+
+    if (!refreshToken) {
+      // No refresh-token flow wired up yet (backend migration in progress).
+      // Rather than logging out on the very first 401, retry the request
+      // once with the same token: a genuinely dead token will just 401
+      // again (and then we log out above), but a one-off/flaky 401 gets a
+      // second chance instead of nuking the whole session.
+      return api(originalRequest);
+    }
 
     // If refresh is already happening, queue this failed request
     if (isRefreshing) {
@@ -180,13 +164,6 @@ api.interceptors.response.use(
     isRefreshing = true;
 
     try {
-      const refreshToken = localStorage.getItem("refreshToken");
-
-      if (!refreshToken) {
-        forceLogout();
-        return Promise.reject(error);
-      }
-
       const refreshUrl = BASE_URL?.endsWith("/")
         ? `${BASE_URL}auth/refresh`
         : `${BASE_URL}/auth/refresh`;
@@ -217,12 +194,6 @@ api.interceptors.response.use(
 
       if (newRefreshToken) {
         localStorage.setItem("refreshToken", newRefreshToken);
-      }
-
-      const currentTabId = sessionStorage.getItem("tab_id");
-
-      if (currentTabId) {
-        localStorage.setItem("active_tab_id", currentTabId);
       }
 
       api.defaults.headers.common.Authorization = `Bearer ${newToken}`;
