@@ -30,6 +30,14 @@ const routeLoaders = {
   subscriptions: () => import("@/routes/subscriptions"),
   wallet: () => import("@/routes/wallet"),
   settings: () => import("@/routes/settings"),
+  settingsNotifications: () => import("@/routes/settings-notifications"),
+  settingsDisplay: () => import("@/routes/settings-display"),
+  settingsPrivacy: () => import("@/routes/settings-privacy"),
+  settingsAccountPassword: () => import("@/routes/settings-account-password"),
+  settingsAccountSessions: () => import("@/routes/settings-account-sessions"),
+  settingsAccountTwoFactor: () => import("@/routes/settings-account-2fa"),
+  settingsAccountLink: () => import("@/routes/settings-account-link"),
+  settingsAccountDelete: () => import("@/routes/settings-account-delete"),
   creator: () => import("@/routes/creator"),
 
   studio: () => import("@/routes/studio"),
@@ -59,6 +67,14 @@ const CollectionsPage = lazy(routeLoaders.collections);
 const SubscriptionsPage = lazy(routeLoaders.subscriptions);
 const WalletPage = lazy(routeLoaders.wallet);
 const SettingsPage = lazy(routeLoaders.settings);
+const SettingsNotificationsPage = lazy(routeLoaders.settingsNotifications);
+const SettingsDisplayPage = lazy(routeLoaders.settingsDisplay);
+const SettingsPrivacyPage = lazy(routeLoaders.settingsPrivacy);
+const SettingsPasswordPage = lazy(routeLoaders.settingsAccountPassword);
+const SettingsSessionsPage = lazy(routeLoaders.settingsAccountSessions);
+const SettingsTwoFactorPage = lazy(routeLoaders.settingsAccountTwoFactor);
+const SettingsLinkAccountPage = lazy(routeLoaders.settingsAccountLink);
+const SettingsDeleteAccountPage = lazy(routeLoaders.settingsAccountDelete);
 const CreatorProfilePage = lazy(routeLoaders.creator);
 
 const StudioDashboard = lazy(routeLoaders.studio);
@@ -125,6 +141,22 @@ export default function AppRoutes() {
           <Route path="/wallet" element={<WalletPage />} />
 
           <Route path="/settings" element={<SettingsPage />} />
+
+          <Route path="/settings/notifications" element={<SettingsNotificationsPage />} />
+
+          <Route path="/settings/display" element={<SettingsDisplayPage />} />
+
+          <Route path="/settings/privacy" element={<SettingsPrivacyPage />} />
+
+          <Route path="/settings/account/change-password" element={<SettingsPasswordPage />} />
+
+          <Route path="/settings/account/login-sessions" element={<SettingsSessionsPage />} />
+
+          <Route path="/settings/account/two-factor" element={<SettingsTwoFactorPage />} />
+
+          <Route path="/settings/account/link/:provider" element={<SettingsLinkAccountPage />} />
+
+          <Route path="/settings/account/delete-account" element={<SettingsDeleteAccountPage />} />
 
           <Route path="/creator/:handle" element={<CreatorProfilePage />} />
 

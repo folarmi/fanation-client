@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { CREATORS, REPORT_REASONS, useAppStore } from "@/lib/core";
 import type { Creator, PollOpt, Post } from "@/lib/core";
 import { Avatar, Icon, Photo, SIZES, Verified, myMediaFor } from "@/lib/ui";
+import { useLogout } from "@/hooks/auth/use-logout";
 
 /** Global modal host — open from anywhere via store.openModal(type, data). */
 export function ModalHost() {
