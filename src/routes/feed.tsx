@@ -19,6 +19,7 @@ import { FollowBtn, PostCard } from "@/components/post-card";
 import { useGetData } from "@/hooks/api/use-api";
 import { useAppSelector } from "@/services/hook";
 import { RootState } from "@/services/store";
+import { UserProfile } from "@/utils/types";
 
 /* Each person's story is a short reel, not one frame — 2 to 4 segments,
    picked deterministically per handle so the count doesn't reshuffle on
@@ -304,10 +305,6 @@ export default function FeedPage() {
       queryKey: ["GetCreators"],
     });
 
-  // const suggested = CREATORS.filter(
-  //   (c) => !S.blocked[c.handle] && !S.muted[c.handle],
-  // ).slice(0, 4);
-
   const suggested = useMemo(() => {
     const all =
       (getAllCreators as { data?: { content?: any[] } } | undefined)?.data
@@ -510,34 +507,6 @@ export default function FeedPage() {
             </button>
           </div>
 
-          {/* <div className="card" style={{ padding: 16 }}>
-            <div className="up muted" style={{ marginBottom: 12 }}>
-              Suggested creators
-            </div>
-            {suggested.map((c) => (
-              <div
-                key={c.id}
-                className="row between"
-                style={{ padding: "8px 0" }}
-              >
-                <div
-                  className="row gap10"
-                  style={{ cursor: "pointer" }}
-                  onClick={() => navigate(`/creator/${c.handle}`)}
-                >
-                  <Avatar name={c.name} size={38} />
-                  <div className="col">
-                    <div className="row gap4 t14 b6 uname">
-                      {c.name.split(" ")[0]} {c.v && <Verified s={13} />}
-                    </div>
-                    <div className="muted t12">@{c.handle}</div>
-                  </div>
-                </div>
-                <FollowBtn handle={c.handle} />
-              </div>
-            ))}
-          </div> */}
-
           <div className="card" style={{ padding: 16 }}>
             <div className="up muted" style={{ marginBottom: 12 }}>
               Suggested creators
@@ -569,7 +538,7 @@ export default function FeedPage() {
                 className="no-scrollbar"
                 style={{ maxHeight: 280, overflowY: "auto" }}
               >
-                {suggested?.map((c: any) => (
+                {suggested?.map((c: UserProfile) => (
                   <div
                     key={c.usid}
                     className="row between"
@@ -580,7 +549,11 @@ export default function FeedPage() {
                       style={{ cursor: "pointer" }}
                       onClick={() => navigate(`/creator/${c.username}`)}
                     >
-                      <Avatar name={c.fullName} size={38} />
+                      <Avatar
+                        src={c?.profileImageUrl}
+                        name={c?.fullName}
+                        size={38}
+                      />
                       <div className="col">
                         <div className="row gap4 t14 b6 uname">
                           {c.fullName?.split(" ")[0]}{" "}
