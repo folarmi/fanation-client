@@ -6,6 +6,9 @@ import { FAN_NAV, FAN_TABS, STUDIO_NAV, STUDIO_TABS } from "@/components/nav";
 import { ThemeToggle } from "@/components/theme";
 import { ModalHost } from "@/components/modals";
 import RouteFallback from "@/components/route-fallback";
+import { useFetchProfile } from "@/hooks/apiHooks";
+import { useAppSelector } from "@/services/hook";
+import { RootState } from "@/services/store";
 
 /**
  * One account, two modes: Browse (fan) ⇄ Studio (creator). Route prefix decides
@@ -21,6 +24,11 @@ export default function AppLayout() {
   const pathname = useLocation().pathname;
   const navigate = useNavigate();
   const t = useT();
+  const { userObject } = useAppSelector((state: RootState) => state.auth);
+
+  const myProfileQuery = useFetchProfile(userObject, true);
+  const myProfileData = myProfileQuery?.data?.data;
+
   // const authed = useAppStore((s) => s.authed);
   const coins = useAppStore((s) => s.coins);
   const profile = useAppStore((s) => s.profile);
@@ -101,7 +109,11 @@ export default function AppLayout() {
         triggerStyle={{ padding: 12, width: "100%", cursor: "pointer" }}
         trigger={
           <>
-            <Avatar name={profile.name} size={38} src={profile.avatarUrl} />
+            <Avatar
+              name={profile.name}
+              size={38}
+              src={myProfileData?.profileImageUrl}
+            />
             <div className="col grow" style={{ minWidth: 0 }}>
               <span
                 className="b6 t14 uname"
@@ -112,9 +124,9 @@ export default function AppLayout() {
                   display: "block",
                 }}
               >
-                {profile.name}
+                {myProfileData?.fullName}
               </span>
-              <span className="muted t12">@{profile.handle}</span>
+              <span className="muted t12">@{myProfileData?.username}</span>
             </div>
             <Icon n="more" s={17} c="var(--muted)" />
           </>

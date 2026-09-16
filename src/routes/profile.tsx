@@ -2,6 +2,9 @@ import { useNavigate } from "react-router-dom";
 import { useAppStore } from "@/lib/core";
 import { Avatar, Icon, Photo, SIZES, coverFor } from "@/lib/ui";
 import { PostCard } from "@/components/post-card";
+import { useFetchProfile } from "@/hooks/apiHooks";
+import { useAppSelector } from "@/services/hook";
+import { RootState } from "@/services/store";
 
 /**
  * The signed-in account's own profile — same header/avatar shape as
@@ -13,16 +16,24 @@ import { PostCard } from "@/components/post-card";
 export default function ProfilePage() {
   const S = useAppStore();
   const navigate = useNavigate();
-  const { name, handle, avatarUrl, coverUrl } = S.profile;
+  const { userObject } = useAppSelector((state: RootState) => state.auth);
+
+  // const { name, handle, avatarUrl, coverUrl } = S.profile;
   const subCount = Object.keys(S.subs).length;
   const followCount = Object.values(S.follows).filter(Boolean).length;
+
+  const myProfileQuery = useFetchProfile(userObject, true);
+  const myProfileData = myProfileQuery?.data?.data;
+  const isCreator = myProfileQuery?.data?.data?.role === "CREATOR";
+
+  console.log(myProfileQuery?.data?.data);
 
   return (
     <div>
       <div style={{ height: 180, position: "relative", overflow: "hidden" }}>
-        {coverUrl ? (
+        {myProfileData?.coverImageUrl ? (
           <img
-            src={coverUrl}
+            src={myProfileData?.coverImageUrl}
             alt=""
             style={{
               position: "absolute",
@@ -33,7 +44,11 @@ export default function ProfilePage() {
             }}
           />
         ) : (
-          <Photo sizes={SIZES.cover} src={coverFor(handle)} seed={handle} />
+          <Photo
+            sizes={SIZES.cover}
+            src={coverFor(myProfileData?.username)}
+            seed={myProfileData?.username}
+          />
         )}
       </div>
       <div className="content" style={{ marginTop: -78 }}>
@@ -47,27 +62,36 @@ export default function ProfilePage() {
             position: "relative",
           }}
         >
-          <Avatar name={name} size={104} src={avatarUrl} />
+          <Avatar
+            name={myProfileData?.fullName}
+            size={104}
+            src={myProfileData?.profileImageUrl}
+          />
         </div>
+
         <div
           className="row between wrap"
           style={{ alignItems: "flex-end", gap: 16, marginTop: 14 }}
         >
           <div className="col gap4">
-            <div className="t24 b7 uname">{name}</div>
-            <div className="muted">@{handle}</div>
-            <div className="row gap16 muted t13" style={{ marginTop: 4 }}>
-              <span>
-                <b>{S.myPosts.length}</b> posts
-              </span>
-              <span>
-                <b>{subCount}</b> subscriptions
-              </span>
-              <span>
-                <b>{followCount}</b> following
-              </span>
-            </div>
+            <div className="t24 b7 uname">{myProfileData?.fullName}</div>
+            <div className="muted">@{myProfileData?.username}</div>
+
+            {isCreator && (
+              <div className="row gap16 muted t13" style={{ marginTop: 4 }}>
+                <span>
+                  <b>{S.myPosts.length}</b> posts
+                </span>
+                <span>
+                  <b>{subCount}</b> subscriptions
+                </span>
+                <span>
+                  <b>{followCount}</b> following
+                </span>
+              </div>
+            )}
           </div>
+
           <div className="row gap10">
             <button
               className="btn btn-ghost"
