@@ -19,7 +19,7 @@ import { FollowBtn, PostCard } from "@/components/post-card";
 import { useGetData } from "@/hooks/api/use-api";
 import { useAppSelector } from "@/services/hook";
 import { RootState } from "@/services/store";
-import { UserProfile } from "@/utils/types";
+import { CreatorUser } from "@/utils/types";
 
 /* Each person's story is a short reel, not one frame — 2 to 4 segments,
    picked deterministically per handle so the count doesn't reshuffle on
@@ -532,16 +532,16 @@ export default function FeedPage() {
                 className="no-scrollbar"
                 style={{ maxHeight: 280, overflowY: "auto" }}
               >
-                {suggested?.map((c: UserProfile) => (
+                {suggested?.map((c: CreatorUser) => (
                   <div
-                    key={c.usid}
+                    key={c?.publicId}
                     className="row between"
                     style={{ padding: "8px 0" }}
                   >
                     <div
                       className="row gap10"
                       style={{ cursor: "pointer" }}
-                      onClick={() => navigate(`/creator/${c.username}`)}
+                      onClick={() => navigate(`/creator/${c?.username}`)}
                     >
                       <Avatar
                         src={c?.profileImageUrl}
@@ -551,12 +551,12 @@ export default function FeedPage() {
                       <div className="col">
                         <div className="row gap4 t14 b6 uname">
                           {c.fullName?.split(" ")[0]}{" "}
-                          {c.v && <Verified s={13} />}
+                          {/* {c.v && <Verified s={13} />} */}
                         </div>
                         <div className="muted t12">@{c.username}</div>
                       </div>
                     </div>
-                    <FollowBtn handle={c.username} />
+                    <FollowBtn publicId={c?.publicId} />
                   </div>
                 ))}
               </div>

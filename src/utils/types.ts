@@ -100,3 +100,19 @@ export interface UserProfile {
   profileImageUrl: string;
   creatorProfile: CreatorProfile | null;
 }
+
+export interface CreatorUser {
+  publicId: string;
+  role: RoleType;
+  fullName: string;
+  gender: string;
+  location: string;
+  profileImageUrl: string;
+  coverImageUrl: string;
+  interest: string;
+  bio: string;
+  username: string;
+  websiteUrl: string;
+  displayName: string;
+  creatorProfile: CreatorProfile;
+}

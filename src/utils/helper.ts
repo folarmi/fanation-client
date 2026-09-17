@@ -156,3 +156,26 @@ export const isEmail = (value?: string) => {
 
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 };
+
+export function isActivelySubscribed(
+  subscriptions: any[],
+  creatorUsid: string | undefined,
+): { isActive: boolean; subscription: any } {
+  // Find the subscription for this creator
+  const subscription = subscriptions?.find(
+    (sub) => sub?.creator?.usid === creatorUsid,
+  );
+
+  // If no subscription found, return false
+  if (!subscription) {
+    return { isActive: false, subscription: null };
+  }
+
+  // Check if subscription is still active (end date is in the future)
+  const isActive = new Date(subscription?.endDate) > new Date();
+
+  return {
+    isActive,
+    subscription,
+  };
+}
