@@ -150,3 +150,9 @@ export const getReadableLocation = async (): Promise<LocationResult> => {
     };
   }
 };
+
+export const isEmail = (value?: string) => {
+  if (!value) return false;
+
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+};
