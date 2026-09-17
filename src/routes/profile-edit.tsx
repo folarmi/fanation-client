@@ -836,7 +836,6 @@ export default function EditProfilePage() {
   const usernameIsEmail = isEmail(profile?.username);
   const usernameReadOnly = Boolean(profile?.username) && !usernameIsEmail;
 
-  // --- Username uniqueness check ---
   const setUsernameMutation = useCustomMutation({
     endpoint: `auth/set-username`,
     successMessage: () => "Username set successfully",
@@ -871,7 +870,6 @@ export default function EditProfilePage() {
     }
   }, 500);
 
-  // --- Save ---
   const updateProfileMutation = useCustomMutation({
     endpoint: `profile/update-user`,
     method: "put",
@@ -888,11 +886,16 @@ export default function EditProfilePage() {
   const submitForm = async () => {
     const isValid = await trigger();
     if (!isValid) return;
-    updateProfileMutation.mutate(getValues());
+
+    const formValues = {
+      ...getValues(),
+      role: userObject?.role,
+      usid: userObject?.usid,
+    };
+
+    updateProfileMutation.mutate(formValues);
   };
 
-  // --- Image uploads ---
-  // Note: useFileUpload's mutate expects { file, extraData }, not a bare File.
   const { mutate: uploadProfilePicture, isPending: profilePictureIsPending } =
     useFileUpload({
       url: "/files/display-picture",
@@ -901,6 +904,8 @@ export default function EditProfilePage() {
         updateProfileMutation.mutate({
           ...getValues(),
           profileImageUrl: res?.body,
+          role: userObject?.role,
+          usid: userObject?.usid,
         });
         return res?.message || "File uploaded successfully!";
       },
@@ -915,6 +920,8 @@ export default function EditProfilePage() {
         updateProfileMutation.mutate({
           ...getValues(),
           coverImageUrl: res?.body?.url,
+          role: userObject?.role,
+          usid: userObject?.usid,
         });
         return res?.message || "File uploaded successfully!";
       },
