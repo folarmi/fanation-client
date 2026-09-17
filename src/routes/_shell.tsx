@@ -133,7 +133,7 @@ export default function AppLayout() {
         }
         items={[
           {
-            t: `${t("log_out")} @${profile.handle}`,
+            t: `${t("log_out")} @${myProfileData?.username}`,
             fn: () => openModal("logout"),
           },
         ]}
