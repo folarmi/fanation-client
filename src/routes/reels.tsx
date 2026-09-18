@@ -266,12 +266,12 @@ export default function ReelsPage() {
               />
             </Link>
             <Link
-              to={`/creator/${c.handle}`}
+              to={`/creator/${c?.handle}`}
               className="row gap6 b7 t14 reelname uname"
             >
               {c.name.split(" ")[0]} {c.v && <Verified s={13} />}
             </Link>
-            <FollowBtn handle={c?.handle} />
+            <FollowBtn publicId={c?.handle} />
           </div>
           <div className="t14 reelcap">{captionFor(c.handle)}</div>
         </div>
