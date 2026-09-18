@@ -89,6 +89,10 @@ import shieldCheckmarkSolid from "@/assets/icons/shield-checkmark.svg?raw";
 import cameraSolid from "@/assets/icons/camera.svg?raw";
 import calendarSolid from "@/assets/icons/calendar.svg?raw";
 import personSolid from "@/assets/icons/person.svg?raw";
+import discSolid from "@/assets/icons/disc.svg?raw";
+import lockClosedSolid from "@/assets/icons/lock-closed.svg?raw";
+import repeatSolid from "@/assets/icons/repeat.svg?raw";
+import chatbubbleSolid from "@/assets/icons/chatbubble.svg?raw";
 
 const inner = (raw: string) =>
   raw.replace(/^<svg[^>]*>/, "").replace(/<\/svg>\s*$/, "");
@@ -173,6 +177,10 @@ const SOLID: Record<string, string> = {
   camera: inner(cameraSolid),
   cal: inner(calendarSolid),
   user: inner(personSolid),
+  coin: inner(discSolid),
+  lock: inner(lockClosedSolid),
+  repost: inner(repeatSolid),
+  comment: inner(chatbubbleSolid),
 };
 
 export function Icon({
@@ -325,11 +333,13 @@ export function Avatar({
   size = 40,
   ring,
   src,
+  onClick,
 }: {
   name?: string;
   size?: number;
   ring?: string;
   src?: string;
+  onClick?: (e: React.MouseEvent) => void;
 }) {
   const h = fhash(name);
   const init = (
@@ -344,10 +354,12 @@ export function Avatar({
   return (
     <div
       className="av"
+      onClick={onClick}
       style={{
         width: size,
         height: size,
         fontSize: size * 0.36,
+        cursor: onClick ? "pointer" : undefined,
         background: `linear-gradient(135deg,hsl(${h % 360},66%,55%),hsl(${(h + 50) % 360},66%,42%))`,
         boxShadow: ring ? `0 0 0 2px ${ring}` : "none",
       }}

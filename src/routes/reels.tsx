@@ -1,7 +1,22 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { CREATORS, SEED_COMMENTS, SEED_FEED, fhash, useAppStore } from "@/lib/core";
-import { Avatar, Icon, Loop, Photo, Scrim, SIZES, Verified, reelFor } from "@/lib/ui";
+import {
+  CREATORS,
+  SEED_COMMENTS,
+  SEED_FEED,
+  fhash,
+  useAppStore,
+} from "@/lib/core";
+import {
+  Avatar,
+  Icon,
+  Loop,
+  Photo,
+  Scrim,
+  SIZES,
+  Verified,
+  reelFor,
+} from "@/lib/ui";
 import { FollowBtn } from "@/components/post-card";
 
 /**
@@ -46,7 +61,8 @@ function captionFor(handle: string): string {
 }
 
 /** Counts that differ per creator. Deterministic, so they survive a reload. */
-const kfmt = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}K` : String(n));
+const kfmt = (n: number) =>
+  n >= 1000 ? `${(n / 1000).toFixed(1)}K` : String(n);
 const likesFor = (h: string) => 6200 + (fhash(`l${h}`) % 46000);
 const cmtsFor = (h: string) => 140 + (fhash(`c${h}`) % 1900);
 
@@ -89,7 +105,10 @@ export default function ReelsPage() {
     const h = (e: KeyboardEvent) => {
       if (e.key === "ArrowDown") setI((v) => v + 1);
       if (e.key === "ArrowUp") setI((v) => v - 1);
-      if (e.key === " ") { e.preventDefault(); setPaused((v) => !v); }
+      if (e.key === " ") {
+        e.preventDefault();
+        setPaused((v) => !v);
+      }
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
@@ -112,7 +131,9 @@ export default function ReelsPage() {
     setProg(0);
     const v = cardRef.current?.querySelector("video");
     if (!v) return;
-    const on = () => { if (v.duration) setProg(v.currentTime / v.duration); };
+    const on = () => {
+      if (v.duration) setProg(v.currentTime / v.duration);
+    };
     v.addEventListener("timeupdate", on);
     return () => v.removeEventListener("timeupdate", on);
   }, [ix, loop]);
@@ -149,74 +170,141 @@ export default function ReelsPage() {
     swiped.current = true;
     setI((v) => v + (dy < 0 ? 1 : -1));
   };
-  const onCardClick = () => { if (!swiped.current) setPaused((v) => !v); };
+  const onCardClick = () => {
+    if (!swiped.current) setPaused((v) => !v);
+  };
 
-  const act = (n: string, label: string, on: () => void, extra?: { c?: string; fill?: string }) => (
+  const act = (
+    n: string,
+    label: string,
+    on: () => void,
+    extra?: { c?: string; fill?: string },
+  ) => (
     <div className="reelact" onClick={on}>
-      <div className="reelic"><Icon n={n} s={20} {...(extra || {})} /></div>
+      <div className="reelic">
+        <Icon n={n} s={20} {...(extra || {})} />
+      </div>
       <span className="reelnum">{label}</span>
     </div>
   );
 
   return (
-    <div className="reelroot" onWheel={onWheel} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+    <div
+      className="reelroot"
+      onWheel={onWheel}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+    >
       <div className={"reelframe" + (showComments ? " comments-open" : "")}>
         <div className="reelcard" ref={cardRef} onClick={onCardClick}>
           {/* `key` forces a fresh <video> per reel: without it React reuses the
               element and the old frame hangs for a beat over the new source. */}
-          {loop
-            ? <Loop key={c.id} src={loop} poster={still} active={!paused} priority />
-            : <Photo sizes={SIZES.reel} src={still} seed={c.id} />}
+          {loop ? (
+            <Loop
+              key={c.id}
+              src={loop}
+              poster={still}
+              active={!paused}
+              priority
+            />
+          ) : (
+            <Photo sizes={SIZES.reel} src={still} seed={c.id} />
+          )}
 
           {/* The frames are real photographs and a third of them are bright, so
               the top wash is unconditional — the live badge sits in it. The
               bottom wash only exists when the caption is over the video, which
               below 1360px it is; `.reelscrim` is display:none above that. */}
           <Scrim from={0.42} height="20%" top />
-          <div className="reelscrim"><Scrim from={0.85} height="46%" /></div>
+          <div className="reelscrim">
+            <Scrim from={0.85} height="46%" />
+          </div>
 
           {c.live && (
-            <div className="badge-live" style={{ position: "absolute", top: 14, left: 14, zIndex: 3 }}>
-              <span className="dot" />LIVE
+            <div
+              className="badge-live"
+              style={{ position: "absolute", top: 14, left: 14, zIndex: 3 }}
+            >
+              <span className="dot" />
+              LIVE
             </div>
           )}
 
           {paused && (
-            <div className="row center" style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 3 }}>
-              <div className="feature-ic" style={{ width: 62, height: 62, background: "rgba(0,0,0,.42)" }}>
+            <div
+              className="row center"
+              style={{
+                position: "absolute",
+                inset: 0,
+                pointerEvents: "none",
+                zIndex: 3,
+              }}
+            >
+              <div
+                className="feature-ic"
+                style={{ width: 62, height: 62, background: "rgba(0,0,0,.42)" }}
+              >
                 <Icon n="play" s={26} c="#fff" fill="#fff" />
               </div>
             </div>
           )}
 
-          <div className="reelseek" aria-hidden><i style={{ width: `${Math.round(prog * 100)}%` }} /></div>
+          <div className="reelseek" aria-hidden>
+            <i style={{ width: `${Math.round(prog * 100)}%` }} />
+          </div>
         </div>
 
         {/* Sibling of the card, not a child: a click here cannot bubble into the
             pause handler, so none of this needs stopPropagation. */}
         <div className="reelmeta">
           <div className="row gap8" style={{ marginBottom: 9 }}>
-            <Link to={`/creator/${c.handle}`}><Avatar name={c.name} size={38} /></Link>
-            <Link to={`/creator/${c.handle}`} className="row gap6 b7 t14 reelname uname">
+            <Link to={c.live ? `/live/${c.handle}` : `/creator/${c.handle}`}>
+              <Avatar
+                name={c.name}
+                size={38}
+                ring={c.live ? "var(--coral)" : undefined}
+              />
+            </Link>
+            <Link
+              to={`/creator/${c.handle}`}
+              className="row gap6 b7 t14 reelname uname"
+            >
               {c.name.split(" ")[0]} {c.v && <Verified s={13} />}
             </Link>
-            <FollowBtn handle={c.handle} />
+            <FollowBtn handle={c?.handle} />
           </div>
           <div className="t14 reelcap">{captionFor(c.handle)}</div>
         </div>
 
         <div className="reelacts">
-          <div className="reelact" onClick={() => setLiked((m) => ({ ...m, [ix]: !m[ix] }))}>
+          <div
+            className="reelact"
+            onClick={() => setLiked((m) => ({ ...m, [ix]: !m[ix] }))}
+          >
             <div className="reelic">
-              <Icon n="heart" s={20} {...(isLiked ? { c: "var(--coral)", fill: "var(--coral)" } : {})} />
+              <Icon
+                n="heart"
+                s={20}
+                {...(isLiked
+                  ? { c: "var(--coral)", fill: "var(--coral)" }
+                  : {})}
+              />
             </div>
             <span className="reelnum">{kfmt(likes + (isLiked ? 1 : 0))}</span>
           </div>
-          {act("comment", kfmt(cmtsFor(c.handle) + myComments.length), () => setShowComments((v) => !v),
-            showComments ? { c: "var(--blueL-ink)" } : undefined)}
+          {act(
+            "comment",
+            kfmt(cmtsFor(c.handle) + myComments.length),
+            () => setShowComments((v) => !v),
+            showComments ? { c: "var(--blueL-ink)" } : undefined,
+          )}
           {act("gift", "Gift", () => S.openModal("gift", c))}
-          {act("repost", "Share", () => S.toast(`Link copied — fanation.app/r/${c.handle}`))}
-          {act("more", "More", () => S.openModal("report", { id: `reel-${c.handle}`, h: c.handle }))}
+          {act("repost", "Share", () =>
+            S.toast(`Link copied — fanation.app/r/${c.handle}`),
+          )}
+          {act("more", "More", () =>
+            S.openModal("report", { id: `reel-${c.handle}`, h: c.handle }),
+          )}
         </div>
 
         {/* A side panel next to the video on desktop — not an overlay on top of
@@ -237,26 +325,44 @@ export default function ReelsPage() {
             onTouchEnd={(e) => e.stopPropagation()}
           >
             <div className="reelcomments-head">
-              <button className="muted" onClick={() => setShowComments(false)} aria-label="Close comments">
+              <button
+                className="muted"
+                onClick={() => setShowComments(false)}
+                aria-label="Close comments"
+              >
                 <Icon n="x" s={18} />
               </button>
               <span className="b7 t14">Comments</span>
             </div>
             <div className="reelcomments-list">
               {reelCommentsFor(c.handle).map(([name, handle, text], i) => (
-                <div key={i} className="row gap10" style={{ padding: "8px 0", alignItems: "flex-start" }}>
+                <div
+                  key={i}
+                  className="row gap10"
+                  style={{ padding: "8px 0", alignItems: "flex-start" }}
+                >
                   <Avatar name={name} size={32} />
                   <div className="col">
-                    <span className="t13"><b className="uname">{name}</b> <span className="muted2">@{handle}</span></span>
+                    <span className="t13">
+                      <b className="uname">{name}</b>{" "}
+                      <span className="muted2">@{handle}</span>
+                    </span>
                     <span className="t14">{text}</span>
                   </div>
                 </div>
               ))}
               {myComments.map((text, i) => (
-                <div key={`m${i}`} className="row gap10" style={{ padding: "8px 0", alignItems: "flex-start" }}>
+                <div
+                  key={`m${i}`}
+                  className="row gap10"
+                  style={{ padding: "8px 0", alignItems: "flex-start" }}
+                >
                   <Avatar name="You" size={32} />
                   <div className="col">
-                    <span className="t13"><b className="uname">You</b> <span className="muted2">@yourhandle · now</span></span>
+                    <span className="t13">
+                      <b className="uname">You</b>{" "}
+                      <span className="muted2">@yourhandle · now</span>
+                    </span>
                     <span className="t14">{text}</span>
                   </div>
                 </div>
@@ -264,9 +370,20 @@ export default function ReelsPage() {
             </div>
             <div className="reelcomments-input">
               <Avatar name="You" size={30} />
-              <input className="input" placeholder="Add a comment…" value={ctext}
-                onChange={(e) => setCtext(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") sendComment(); }} />
-              <button className="btn btn-blue btn-sm" disabled={!ctext.trim()} onClick={sendComment}>
+              <input
+                className="input"
+                placeholder="Add a comment…"
+                value={ctext}
+                onChange={(e) => setCtext(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") sendComment();
+                }}
+              />
+              <button
+                className="btn btn-blue btn-sm"
+                disabled={!ctext.trim()}
+                onClick={sendComment}
+              >
                 <Icon n="send" s={15} />
               </button>
             </div>
@@ -279,10 +396,14 @@ export default function ReelsPage() {
           gesture and a floating control would sit over the action rail. */}
       <div className="reelnav">
         <button aria-label="Previous reel" onClick={() => setI(i - 1)}>
-          <span style={{ transform: "rotate(-90deg)", display: "flex" }}><Icon n="arrow" s={18} /></span>
+          <span style={{ transform: "rotate(-90deg)", display: "flex" }}>
+            <Icon n="arrow" s={18} />
+          </span>
         </button>
         <button aria-label="Next reel" onClick={() => setI(i + 1)}>
-          <span style={{ transform: "rotate(90deg)", display: "flex" }}><Icon n="arrow" s={18} /></span>
+          <span style={{ transform: "rotate(90deg)", display: "flex" }}>
+            <Icon n="arrow" s={18} />
+          </span>
         </button>
       </div>
     </div>

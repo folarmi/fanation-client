@@ -501,6 +501,20 @@ export default function FeedPage() {
             </button>
           </div>
 
+          {/* <div className="up muted" style={{ marginBottom: 12 }}>Suggested creators</div>
+            {suggested.map((c) => (
+              <div key={c.id} className="row between" style={{ padding: "8px 0" }}>
+                <div className="row gap10" style={{ cursor: "pointer" }} onClick={() => navigate(`/creator/${c.handle}`)}>
+                  <Avatar name={c.name} size={38} ring={c.live ? "var(--coral)" : undefined}
+                    onClick={c.live ? (e) => { e.stopPropagation(); navigate(`/live/${c.handle}`); } : undefined} />
+                  <div className="col">
+                    <div className="row gap4 t14 b6 uname">{c.name.split(" ")[0]} {c.v && <Verified s={13} />}</div>
+                    <div className="muted t12">@{c.handle}</div>
+                  </div>
+                </div>
+                <FollowBtn handle={c.handle} />
+>>>>>>> 840a954dec28eddf1360db021213b32266914152
+              </div> */}
           <div className="card" style={{ padding: 16 }}>
             <div className="up muted" style={{ marginBottom: 12 }}>
               Suggested creators
