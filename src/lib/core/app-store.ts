@@ -39,6 +39,10 @@ export interface AppState {
     avatarUrl?: string;
     coverUrl?: string;
   };
+  /* Fan-only until they ask to be a creator — gates Wallet's Withdraw (there is
+     nothing to withdraw as a fan) and swaps the sidebar's studio switch for a
+     "Become a creator" prompt. */
+  isCreator: boolean;
   // wallet
   coins: number;
   walletTx: TxItem[];
@@ -69,6 +73,7 @@ export interface AppState {
   setTheme(t: "dark" | "light"): void;
   setLanguage(code: string): void;
   updateProfile(p: Partial<AppState["profile"]>): void;
+  becomeCreator(): void;
   toast(
     msg: string,
     tone?: "ok" | "err" | "",
@@ -136,6 +141,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
     interest: "",
     bio: "",
   },
+  isCreator: false,
   coins: 12400,
   walletTx: [],
   payoutReqs: [],
@@ -196,6 +202,13 @@ export const useAppStore = create<AppState>()((set, get) => ({
   updateProfile: (p) => {
     set((s) => ({ profile: { ...s.profile, ...p } }));
     get().toast("Profile updated", "ok");
+  },
+
+  // POST /me/become-creator — instant here, same as every other seed-data
+  // toggle in this store; a real integration would gate this on the /studio/verify flow.
+  becomeCreator: () => {
+    set({ isCreator: true });
+    get().toast("You're a creator now — welcome to Creator Studio", "ok");
   },
 
   toast: (msg, tone = "", actionLabel, action) => {

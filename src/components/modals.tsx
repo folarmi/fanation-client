@@ -751,7 +751,7 @@ function ChatInfoModal({ c = CREATORS[0] }: { c?: Creator }) {
           @{c.handle}
           {c.live && <span className="coral"> · Live now</span>}
         </div>
-        <div className="row gap28" style={{ marginTop: 14 }}>
+        <div className="row gap16" style={{ marginTop: 14 }}>
           <button
             className="col center gap6"
             onClick={() => {
