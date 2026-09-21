@@ -1118,6 +1118,7 @@ export default function FeedPage() {
               </div>
             </div>
           </div>
+
           {feed.length === 0 && (
             <div
               className="card col center gap10"
@@ -1139,6 +1140,7 @@ export default function FeedPage() {
               </button>
             </div>
           )}
+
           {feed.map((p) => (
             <PostCard key={p.id} p={p} />
           ))}
