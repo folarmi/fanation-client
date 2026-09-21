@@ -123,7 +123,7 @@ export function mapContentToFeedPost(
   raw: RawContent,
   viewerEmail?: string,
 ): FeedPost {
-  const reactions = raw.reactions ?? [];
+  const reactions = raw?.reactions ?? [];
 
   const byReactionType = Object.fromEntries(
     REACTION_TYPES.map((t) => [
@@ -135,48 +135,48 @@ export function mapContentToFeedPost(
   const myReaction =
     reactions.find((r) => r.createdBy === viewerEmail)?.type ?? null;
 
-  const totalVotes = (raw.pollChoices ?? []).reduce(
-    (sum, c) => sum + (c.votes ?? 0),
+  const totalVotes = (raw?.pollChoices ?? []).reduce(
+    (sum, c) => sum + (c?.votes ?? 0),
     0,
   );
 
-  const votedIndex = raw.pollChoices?.findIndex((c) => c.votedByMe) ?? -1;
+  const votedIndex = raw?.pollChoices?.findIndex((c) => c.votedByMe) ?? -1;
 
   return {
-    id: raw.publicId,
-    authorEmail: raw.createdBy,
-    who: raw.creator?.name || "Unknown User",
-    handle: raw.creator?.username || "",
-    avatar: raw.creator?.profilePic,
-    verified: !!raw.creator?.verified,
-    live: !!raw.creator?.live,
-    createdAt: raw.createdDate,
-    text: raw.message,
+    id: raw?.publicId,
+    authorEmail: raw?.createdBy,
+    who: raw?.creator?.name || "Unknown User",
+    handle: raw?.creator?.username || "",
+    avatar: raw?.creator?.profilePic,
+    verified: !!raw?.creator?.verified,
+    live: !!raw?.creator?.live,
+    createdAt: raw?.createdDate,
+    text: raw?.message,
 
-    media: raw.mediaFiles ?? [],
+    media: raw?.mediaFiles ?? [],
 
-    poll: raw.pollChoices?.length
-      ? raw.pollChoices.map((c) => ({
+    poll: raw?.pollChoices?.length
+      ? raw?.pollChoices.map((c) => ({
           label: c.label,
           pct: totalVotes ? Math.round(((c.votes ?? 0) / totalVotes) * 100) : 0,
         }))
       : null,
     pollVotedIndex: votedIndex === -1 ? null : votedIndex,
-    pollDuration: raw.pollDuration,
+    pollDuration: raw?.pollDuration,
 
-    locked: raw.visibility === "LOCKED",
-    price: raw.price,
+    locked: raw?.visibility === "LOCKED",
+    price: raw?.price,
 
     counts: {
-      reactions: raw.meta?.reactionCount ?? reactions.length,
-      comments: raw.meta?.commentCount ?? raw.comments?.length ?? 0,
+      reactions: raw?.meta?.reactionCount ?? reactions.length,
+      comments: raw?.meta?.commentCount ?? raw?.comments?.length ?? 0,
       byReactionType,
     },
     myReaction,
     isBookmarked:
-      raw.bookmarkers?.some((b) => b.email === viewerEmail) ?? false,
+      raw?.bookmarkers?.some((b) => b.email === viewerEmail) ?? false,
 
-    comments: (raw.comments ?? []).map((c) => ({
+    comments: (raw?.comments ?? []).map((c) => ({
       id: c.publicId,
       who: c.author?.name || "Unknown",
       handle: c.author?.username || "",

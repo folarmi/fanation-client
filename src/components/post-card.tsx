@@ -711,7 +711,7 @@ export function PostCard({ raw }: { raw: RawContent }) {
   const { userObject } = useAppSelector((s: RootState) => s.auth);
   const post = mapContentToFeedPost(raw, userObject?.email);
   const { react, removeReaction, toggleBookmark, addComment, recordView } =
-    useContentInteractions(post.id, userObject?.email);
+    useContentInteractions(post?.id, userObject?.email);
 
   const mine = post.authorEmail === userObject?.email;
   const isSub = false; // TODO: wire once subscription-per-post data exists; see FollowBtn for the query shape
@@ -723,7 +723,10 @@ export function PostCard({ raw }: { raw: RawContent }) {
   // View tracking, folded in from the old FeedPost wrapper.
   const rootRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (!rootRef.current || post.raw.viewers?.includes(userObject?.email ?? ""))
+    if (
+      !rootRef?.current ||
+      post?.raw?.viewers?.includes(userObject?.email ?? "")
+    )
       return;
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -815,7 +818,7 @@ export function PostCard({ raw }: { raw: RawContent }) {
           </div>
         </div>
         <div className="row gap8">
-          {!mine && <FollowBtn publicId={post.raw.createdBy} />}
+          {!mine && <FollowBtn publicId={post?.raw?.createdBy} />}
           <Menu items={menu} />
         </div>
       </div>
