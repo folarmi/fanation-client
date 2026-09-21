@@ -111,7 +111,7 @@ export function FollowBtn({ publicId }: { publicId: string }) {
     publicId,
   );
   const isSubscribed = currentSub ? currentSub.isActive : false;
-  console.log(getViewerSubscriptions?.data?.content);
+
   const invalidate = () =>
     queryClient.invalidateQueries({
       queryKey: ["GetSubscriptionsForViewer"],
