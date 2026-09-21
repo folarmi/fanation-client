@@ -19,6 +19,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAppSelector } from "@/services/hook";
 import { RootState } from "@/services/store";
 import { isActivelySubscribed } from "@/utils/helper";
+import { CreatorUser } from "@/utils/types";
 
 /**
  * The feed column is 640 wide and the photographs are cropped 3:2, so 420 is
@@ -107,9 +108,14 @@ export function FollowBtn({ publicId }: { publicId: string }) {
   });
 
   const currentSub = isActivelySubscribed(
-    getViewerSubscriptions?.data?.content,
+    (
+      getViewerSubscriptions as
+        | { data?: { content?: CreatorUser[] } }
+        | undefined
+    )?.data?.content ?? [],
     publicId,
   );
+
   const isSubscribed = currentSub ? currentSub.isActive : false;
 
   const invalidate = () =>

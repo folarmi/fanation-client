@@ -6,7 +6,7 @@ import {
   Icon,
   Photo,
   SIZES,
-  Verified,
+  // Verified,
   coverFor,
   gridFor,
 } from "@/lib/ui";
@@ -28,7 +28,7 @@ export default function CreatorProfilePage() {
   const isSub = !!S.subs[c.handle];
   const posts = SEED_FEED.filter((p) => p.h === c.handle).slice(0, 6);
 
-  const { data: profileData, isLoading: getCreatorIsLoading } = useGetData({
+  const { data: profileData } = useGetData({
     url: `profile/${handle}`,
     queryKey: ["GetProfileByUserName", handle],
   });
