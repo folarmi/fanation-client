@@ -21,6 +21,12 @@ export default defineConfig({
       "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
     },
   },
-  preview: { port: 3000, host: true },
+  preview: {
+    port: 3000,
+    host: true,
+    headers: {
+      "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
+    },
+  },
   build: { outDir: "dist", sourcemap: true },
 });

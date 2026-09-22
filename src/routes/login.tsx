@@ -371,33 +371,3 @@ export default function Login() {
     </div>
   );
 }
-
-// const getNotificationToken = async () => {
-//   if (!("Notification" in window)) {
-//     return null;
-//   }
-
-//   try {
-//     if (Notification.permission === "denied") {
-//       showToast(
-//         "Please enable notifications in your browser settings to receive updates.",
-//         "warning",
-//       );
-
-//       return null;
-//     }
-
-//     if (Notification.permission === "default") {
-//       const permission = await Notification.requestPermission();
-
-//       if (permission !== "granted") {
-//         return null;
-//       }
-//     }
-
-//     return await getFCMToken();
-//   } catch (error) {
-//     console.error("Unable to retrieve FCM token:", error);
-//     return null;
-//   }
-// };

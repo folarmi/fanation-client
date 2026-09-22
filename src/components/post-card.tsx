@@ -18,7 +18,7 @@ import { useCustomMutation, useGetData } from "@/hooks/api/use-api";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAppSelector } from "@/services/hook";
 import { RootState } from "@/services/store";
-import { isActivelySubscribed } from "@/utils/helper";
+import { decodeToken, isActivelySubscribed } from "@/utils/helper";
 import { CreatorUser } from "@/utils/types";
 
 /**
@@ -98,10 +98,12 @@ function PostMedia({
   );
 }
 
-export function FollowBtn({ publicId }: { publicId: string }) {
+export function FollowBtn({ username }: { username: string }) {
   const queryClient = useQueryClient();
   const { userObject } = useAppSelector((state: RootState) => state.auth);
+  const user = decodeToken(userObject?.accessToken);
 
+  // console.log(user);
   const { data: getViewerSubscriptions, isLoading: subsLoading } = useGetData({
     url: `subscriptions?page=0&size=20&subscriberEmail=${userObject?.email}`,
     queryKey: ["GetSubscriptionsForViewer"],
@@ -113,7 +115,7 @@ export function FollowBtn({ publicId }: { publicId: string }) {
         | { data?: { content?: CreatorUser[] } }
         | undefined
     )?.data?.content ?? [],
-    publicId,
+    username,
   );
 
   const isSubscribed = currentSub ? currentSub.isActive : false;
@@ -125,7 +127,7 @@ export function FollowBtn({ publicId }: { publicId: string }) {
     });
 
   const subscribeMutation = useCustomMutation({
-    endpoint: `subscriptions/subscribe/${publicId}`,
+    endpoint: `subscriptions/subscribe/${username}`,
     successMessage: () => "Followed",
     onSuccessCallback: invalidate,
   });
@@ -166,24 +168,24 @@ export function PostCard({ p }: { p: Post }) {
   const navigate = useNavigate();
   // `byHandle` falls back to CREATORS[0] for a miss, so "yourhandle" (own
   // posts) must be excluded explicitly rather than trusted to come back empty.
-  const author = p.mine ? null : byHandle(p.h);
+  const author = p?.mine ? null : byHandle(p?.h);
   const [showC, setShowC] = useState(false);
   const [ctext, setCtext] = useState("");
   const [playing, setPlaying] = useState(true);
-  const liked = !!S.liked[p.id];
-  const savedP = !!S.saved[p.id];
-  const isSub = !!S.subs[p.h];
-  const isUnlocked = !!S.unlocked[p.id];
-  const voted = S.votes[p.id];
-  const myC = S.comments[p.id] ?? [];
-  const seeds = p.mine ? [] : seedCommentsFor(p.id);
+  const liked = !!S.liked[p?.id];
+  const savedP = !!S.saved[p?.id];
+  const isSub = !!S.subs[p?.h];
+  const isUnlocked = !!S.unlocked[p?.id];
+  const voted = S?.votes[p?.id];
+  const myC = S?.comments[p?.id] ?? [];
+  const seeds = p?.mine ? [] : seedCommentsFor(p?.id);
   const sendC = () => {
     const v = ctext.trim();
     if (!v) return;
     S.addComment(p.id, v);
     setCtext("");
   };
-  const menu = p.mine
+  const menu = p?.mine
     ? [
         {
           ic: "repost",
@@ -206,14 +208,14 @@ export function PostCard({ p }: { p: Post }) {
         },
         "-" as const,
         { ic: "eye", t: "Not interested", fn: () => S.hide(p.id) },
-        { ic: "bell", t: `Mute @${p.h}`, fn: () => S.mute(p.h) },
+        { ic: "bell", t: `Mute @${p?.h}`, fn: () => S.mute(p?.h) },
         {
           ic: "shield",
-          t: `Block @${p.h}`,
+          t: `Block @${p?.h}`,
           danger: true,
-          fn: () => S.block(p.h),
+          fn: () => S.block(p?.h),
         },
-        S.reported[p.id]
+        S.reported[p?.id]
           ? { ic: "flag", t: "Reported ✓", off: true }
           : {
               ic: "flag",
@@ -228,16 +230,16 @@ export function PostCard({ p }: { p: Post }) {
       <div className="row between">
         <div className="row gap12">
           <Avatar
-            name={p.who}
+            name={p?.who}
             size={44}
             ring={author?.live ? "var(--coral)" : undefined}
-            onClick={author?.live ? () => navigate(`/live/${p.h}`) : undefined}
+            onClick={author?.live ? () => navigate(`/live/${p?.h}`) : undefined}
           />
           <div className="col">
             <div className="row gap6">
-              <span className="b7 t14 uname">{p.who}</span>
-              {p.v && <Verified />}
-              {isSub && !p.mine && (
+              <span className="b7 t14 uname">{p?.who}</span>
+              {p?.v && <Verified />}
+              {isSub && !p?.mine && (
                 <span
                   className="tag"
                   style={{
@@ -250,7 +252,7 @@ export function PostCard({ p }: { p: Post }) {
                   Subscribed
                 </span>
               )}
-              {p.mine && p.vis && (
+              {p?.mine && p?.vis && (
                 <span
                   className="tag"
                   style={{ padding: "1px 8px", fontSize: 10.5 }}
@@ -260,17 +262,17 @@ export function PostCard({ p }: { p: Post }) {
               )}
             </div>
             <div className="muted t13">
-              @{p.h} · {p.t}
+              @{p?.h} · {p?.t}
             </div>
           </div>
         </div>
         <Menu items={menu} />
       </div>
       <div className="t14" style={{ margin: "13px 0", lineHeight: 1.55 }}>
-        {p.text}
+        {p?.text}
       </div>
 
-      {(p.type === "image" || p.type === "video") && (
+      {(p?.type === "image" || p?.type === "video") && (
         <PostMedia
           p={p}
           playing={playing}
@@ -278,9 +280,9 @@ export function PostCard({ p }: { p: Post }) {
         />
       )}
 
-      {p.poll && (
+      {p?.poll && (
         <div className="col gap8" style={{ marginBottom: 4 }}>
-          {p.poll.map((o, i) => {
+          {p?.poll.map((o, i) => {
             const pct =
               voted == null
                 ? o.pct
@@ -337,7 +339,7 @@ export function PostCard({ p }: { p: Post }) {
         </div>
       )}
 
-      {p.type === "locked" && !isUnlocked && (
+      {p?.type === "locked" && !isUnlocked && (
         <div className="locked" style={{ height: LOCKED_H }}>
           {/* Same photograph the unlocked branch shows, blurred in CSS rather
               than pre-blurred into a second file — unlocking has to reveal the
@@ -379,7 +381,7 @@ export function PostCard({ p }: { p: Post }) {
           </div>
         </div>
       )}
-      {p.type === "locked" && isUnlocked && (
+      {p?.type === "locked" && isUnlocked && (
         <div
           style={{
             height: MEDIA_H,
@@ -418,7 +420,7 @@ export function PostCard({ p }: { p: Post }) {
               s={19}
               fill={liked ? "var(--coral-ink)" : undefined}
             />
-            {(p.likes + (liked ? 1 : 0)).toLocaleString()}
+            {(p?.likes + (liked ? 1 : 0)).toLocaleString()}
           </button>
           <button
             className="row gap6 muted"
@@ -426,11 +428,11 @@ export function PostCard({ p }: { p: Post }) {
             style={{ color: showC ? "var(--blueL-ink)" : "" }}
           >
             <Icon n="comment" s={19} />
-            {p.comments + myC.length}
+            {p?.comments + myC?.length}
           </button>
         </div>
         <div className="row gap12">
-          {!p.mine && (
+          {!p?.mine && (
             <button
               className="btn btn-ghost btn-sm"
               onClick={() => S.openModal("gift", byHandle(p.h))}

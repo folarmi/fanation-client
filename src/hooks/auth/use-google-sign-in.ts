@@ -51,6 +51,12 @@ export function useGoogleSignIn({
   });
 
   const signInWithGoogle = useCallback(async () => {
+    console.log(
+      "signInWithGoogle called, isOpeningPopup:",
+      isOpeningPopup,
+      "isPending:",
+      signInMutation.isPending,
+    );
     if (isOpeningPopup || signInMutation.isPending) {
       return;
     }
@@ -70,7 +76,10 @@ export function useGoogleSignIn({
     try {
       const result = await signInWithPopup(auth, provider);
 
+      console.log("Firebase auth success:", result.user.email);
+
       const idToken = await result.user.getIdToken();
+      console.log("Got ID token, length:", idToken.length);
 
       signInMutation.mutate({
         token: idToken,

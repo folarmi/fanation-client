@@ -271,7 +271,7 @@ export default function ReelsPage() {
             >
               {c.name.split(" ")[0]} {c.v && <Verified s={13} />}
             </Link>
-            <FollowBtn publicId={c?.handle} />
+            <FollowBtn username={c?.handle} />
           </div>
           <div className="t14 reelcap">{captionFor(c.handle)}</div>
         </div>

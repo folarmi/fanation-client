@@ -208,7 +208,7 @@ export default function CollectionsPage() {
                     <div className="muted t12">@{c.handle}</div>
                   </div>
                 </div>
-                <FollowBtn publicId={c.handle} />
+                <FollowBtn username={c.handle} />
               </div>
             ))}
           </div>

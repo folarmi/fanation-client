@@ -159,11 +159,11 @@ export const isEmail = (value?: string) => {
 
 export function isActivelySubscribed(
   subscriptions: any[],
-  creatorUsid: string | undefined,
+  creatorUsername: string | undefined,
 ): { isActive: boolean; subscription: any } {
   // Find the subscription for this creator
   const subscription = subscriptions?.find(
-    (sub) => sub?.creator?.usid === creatorUsid,
+    (sub) => sub?.creator?.username === creatorUsername,
   );
 
   // If no subscription found, return false
@@ -173,9 +173,41 @@ export function isActivelySubscribed(
 
   // Check if subscription is still active (end date is in the future)
   const isActive = new Date(subscription?.endDate) > new Date();
-
   return {
     isActive,
     subscription,
   };
+}
+
+export function decodeToken(token: string) {
+  if (!token || typeof token !== "string") return null;
+
+  const parts = token.split(".");
+  if (parts.length !== 3) {
+    console.error("Invalid JWT format");
+    return null;
+  }
+
+  try {
+    const payload = parts[1];
+    // JWT uses base64url, not plain base64 — swap chars and pad
+    const base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64.padEnd(
+      base64.length + ((4 - (base64.length % 4)) % 4),
+      "=",
+    );
+    const decoded = atob(padded);
+
+    // Handle UTF-8 characters correctly
+    const jsonPayload = decodeURIComponent(
+      Array.from(decoded)
+        .map((c) => "%" + c.charCodeAt(0).toString(16).padStart(2, "0"))
+        .join(""),
+    );
+
+    return JSON.parse(jsonPayload);
+  } catch (err) {
+    console.error("Failed to decode token:", err);
+    return null;
+  }
 }

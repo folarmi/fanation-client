@@ -111,7 +111,7 @@ export default function CreatorProfilePage() {
             </div>
           </div>
           <div className="row gap10">
-            <FollowBtn publicId={c.handle} />
+            <FollowBtn username={c.handle} />
             <button
               className="btn btn-ghost"
               onClick={() => navigate("/messages")}

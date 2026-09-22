@@ -5,6 +5,7 @@ import { PostCard } from "@/components/post-card";
 import { useFetchProfile } from "@/hooks/apiHooks";
 import { useAppSelector } from "@/services/hook";
 import { RootState } from "@/services/store";
+import { useInfiniteGetData } from "@/hooks/api/use-api";
 
 /**
  * The signed-in account's own profile — same header/avatar shape as
@@ -25,9 +26,22 @@ export default function ProfilePage() {
   const myProfileQuery = useFetchProfile(userObject, true);
   const myProfileData = myProfileQuery?.data?.data;
   const isCreator = myProfileQuery?.data?.data?.role === "CREATOR";
+  const contentEmail = myProfileQuery?.data?.data?.email;
 
-  console.log(myProfileQuery?.data?.data);
-
+  const {
+    data: creatorContentPages,
+    isLoading: creatorContentIsLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteGetData({
+    url: `contents?creator=${contentEmail}&liveStream=false&sort=createdDate,desc`,
+    queryKey: ["GetUserContent", contentEmail ?? ""],
+    enabled: !!contentEmail, // don't fetch until we have the email
+    pageSize: 20,
+  });
+  const contentPages = creatorContentPages?.pages[0]?.data?.content;
+  console.log(contentPages);
   return (
     <div>
       <div style={{ height: 180, position: "relative", overflow: "hidden" }}>
@@ -51,6 +65,7 @@ export default function ProfilePage() {
           />
         )}
       </div>
+
       <div className="content" style={{ marginTop: -78 }}>
         <div
           style={{
@@ -115,7 +130,7 @@ export default function ProfilePage() {
         </div>
 
         <div className="col gap16" style={{ maxWidth: 620 }}>
-          {S.myPosts.length === 0 ? (
+          {creatorContentPages?.length === 0 ? (
             <div
               className="card col center gap10"
               style={{ padding: 48, textAlign: "center" }}
@@ -135,7 +150,7 @@ export default function ProfilePage() {
               </button>
             </div>
           ) : (
-            S.myPosts.map((p) => <PostCard key={p.id} p={p} />)
+            contentPages?.map((p) => <PostCard key={p.id} p={p} />)
           )}
         </div>
       </div>

@@ -677,10 +677,11 @@ import {
 } from "@/lib/ui";
 import { fhash } from "@/lib/core";
 import { FollowBtn, PostCard } from "@/components/post-card";
-import { useGetData } from "@/hooks/api/use-api";
+import { useGetData, useInfiniteGetData } from "@/hooks/api/use-api"; // confirm useInfiniteGetData exists here — it's the paginated counterpart to useGetData
 import { useAppSelector } from "@/services/hook";
 import { RootState } from "@/services/store";
 import { CreatorUser } from "@/utils/types";
+import type { RawContent } from "@/lib/adapters/content";
 
 /* Each person's story is a short reel, not one frame — 2 to 4 segments,
    picked deterministically per handle so the count doesn't reshuffle on
@@ -699,6 +700,8 @@ function StoryViewer({ idx, close }: { idx: number; close: () => void }) {
   const [si, setSi] = useState(0);
   const [paused, setPaused] = useState(false);
   const [muted, setMuted] = useState(true);
+  const { userObject } = useAppSelector((state: RootState) => state.auth);
+
   const c =
     CREATORS[((ci % CREATORS.length) + CREATORS.length) % CREATORS.length];
   const segCount = segCountFor(c.handle);
@@ -745,9 +748,11 @@ function StoryViewer({ idx, close }: { idx: number; close: () => void }) {
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
   }, []);
+
   /* The peeked neighbour only ever shows its still frame — Instagram doesn't
      autoplay the cards either side, and decoding two more videos for a strip
      the person cannot interact with yet would be pure waste. */
+
   const Peek = ({ at }: { at: number }) => {
     const n =
       CREATORS[((at % CREATORS.length) + CREATORS.length) % CREATORS.length];
@@ -774,6 +779,7 @@ function StoryViewer({ idx, close }: { idx: number; close: () => void }) {
       </div>
     );
   };
+
   return (
     <div
       className="overlay"
@@ -958,7 +964,41 @@ export default function FeedPage() {
   const { userObject } = useAppSelector((state: RootState) => state.auth);
 
   const [story, setStory] = useState<number | null>(null);
-  const feed = S.feed();
+
+  // Real feed data. This replaces the old `const feed = S.feed();` mock read —
+  // `S` (useAppStore) is still used below for everything that's genuinely
+  // local UI state (modals, toasts, coins, blocked/muted lists), just not
+  // for the post list itself anymore.
+  const {
+    data: getTimelineContent,
+    isLoading: feedLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteGetData({
+    url: `contents?sort=createdDate,desc&liveStream=false`,
+    queryKey: ["GetContents"],
+    pageSize: 20,
+  });
+
+  const rawFeed: RawContent[] = useMemo(
+    () =>
+      getTimelineContent?.pages?.flatMap((page: any) => page.data?.content) ??
+      [],
+    [getTimelineContent],
+  );
+
+  // Blocked/muted previously worked implicitly because the mock store's
+  // `S.feed()` already excluded those creators. With a real fetch that
+  // filtering has to happen on this side.
+  const feed = useMemo(
+    () =>
+      rawFeed.filter(
+        (raw) =>
+          !S.blocked[raw.creator?.username] && !S.muted[raw.creator?.username],
+      ),
+    [rawFeed, S.blocked, S.muted],
+  );
 
   const { data: getAllCreators, isLoading: getAllCreatorsIsLoading } =
     useGetData({
@@ -973,11 +1013,13 @@ export default function FeedPage() {
     const currentUserId = userObject?.usid;
     return all.filter(
       (creator) =>
-        creator.publicId !== currentUserId &&
+        creator?.publicId !== currentUserId &&
         !S.blocked[creator.username] &&
         !S.muted[creator.username],
     );
   }, [getAllCreators, userObject?.usid, S.blocked, S.muted]);
+
+  // console.log(userObject, getAllCreators?.data?.content);
 
   const liveNow = CREATORS?.filter((c) => c.live && !S.blocked[c.handle]);
   return (
@@ -1119,7 +1161,23 @@ export default function FeedPage() {
             </div>
           </div>
 
-          {feed.length === 0 && (
+          {feedLoading && (
+            <div className="card row center" style={{ padding: 48 }}>
+              <span
+                aria-label="Loading feed"
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: 999,
+                  background: "var(--muted)",
+                  display: "block",
+                  animation: "blink 1.4s ease-in-out infinite",
+                }}
+              />
+            </div>
+          )}
+
+          {!feedLoading && feed.length === 0 && (
             <div
               className="card col center gap10"
               style={{ padding: 48, textAlign: "center" }}
@@ -1141,9 +1199,19 @@ export default function FeedPage() {
             </div>
           )}
 
-          {feed.map((p) => (
-            <PostCard key={p.id} p={p} />
+          {feed.map((raw) => (
+            <PostCard key={raw.publicId} raw={raw} />
           ))}
+
+          {hasNextPage && (
+            <button
+              className="btn btn-ghost btn-block"
+              disabled={isFetchingNextPage}
+              onClick={() => fetchNextPage()}
+            >
+              {isFetchingNextPage ? "Loading…" : "Load more"}
+            </button>
+          )}
         </div>
         <div className="col gap16 rail">
           <div className="card" style={{ padding: 16 }}>
@@ -1220,10 +1288,10 @@ export default function FeedPage() {
                             <Verified s={13} />
                           )}
                         </div>
-                        <div className="muted t12">@{creator.username}</div>
+                        <div className="muted t12">@{creator?.username}</div>
                       </div>
                     </div>
-                    <FollowBtn publicId={creator.publicId} />
+                    <FollowBtn username={creator?.username} />
                   </div>
                 ))}
               </div>

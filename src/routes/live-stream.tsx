@@ -330,7 +330,7 @@ export default function LiveStreamPage() {
                 />
                 {heart ? "Liked" : "Like"}
               </button>
-              <FollowBtn publicId={c.handle} />
+              <FollowBtn username={c.handle} />
               <button
                 className="btn btn-grad btn-sm"
                 onClick={() => sendGift("🎁", 200)}
