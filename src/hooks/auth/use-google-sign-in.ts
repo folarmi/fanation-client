@@ -212,6 +212,9 @@ export function useGoogleSignIn({
     try {
       // This navigates the browser away from the app.
       await signInWithRedirect(auth, provider);
+      console.log(
+        "[GoogleSignIn] signInWithRedirect call completed without navigating?",
+      );
     } catch (error: unknown) {
       setIsOpeningRedirect(false);
       sessionStorage.removeItem(GOOGLE_DEVICE_META_KEY);

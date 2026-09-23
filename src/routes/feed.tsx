@@ -682,6 +682,7 @@ import { useAppSelector } from "@/services/hook";
 import { RootState } from "@/services/store";
 import { CreatorUser } from "@/utils/types";
 import type { RawContent } from "@/lib/adapters/content";
+// import { decodeToken } from "@/utils/helper";
 
 /* Each person's story is a short reel, not one frame — 2 to 4 segments,
    picked deterministically per handle so the count doesn't reshuffle on
@@ -1288,10 +1289,10 @@ export default function FeedPage() {
                             <Verified s={13} />
                           )}
                         </div>
-                        <div className="muted t12">@{creator?.username}</div>
+                        <div className="muted t12">@{creator.username}</div>
                       </div>
                     </div>
-                    <FollowBtn username={creator?.username} />
+                    <FollowBtn publicId={creator?.publicId} />
                   </div>
                 ))}
               </div>

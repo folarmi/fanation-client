@@ -440,9 +440,14 @@ export default function Login() {
       setIsProcessingRedirect(true);
 
       try {
+        console.log("[Login] Checking getRedirectResult...");
         const result = await getRedirectResult(auth);
+        console.log("[Login] getRedirectResult returned:", result);
 
         if (!result) {
+          console.log(
+            "[Login] No redirect result — not returning from Google.",
+          );
           return;
         }
 

@@ -1081,7 +1081,7 @@ export default function EditProfilePage() {
             </div>
 
             <CustomFileUploader
-              maxSizeMB={1}
+              maxSizeMB={10}
               acceptFormats={["png", "jpeg", "jpg", "gif", "svg"]}
               onFileUpload={handleProfilePictureUpload}
               showPreview={false}
