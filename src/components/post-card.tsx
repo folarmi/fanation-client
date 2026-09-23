@@ -103,7 +103,7 @@ export function FollowBtn({ username }: { username: string }) {
   const { userObject } = useAppSelector((state: RootState) => state.auth);
   const user = decodeToken(userObject?.accessToken);
 
-  // console.log(user);
+  console.log(user);
   const { data: getViewerSubscriptions, isLoading: subsLoading } = useGetData({
     url: `subscriptions?page=0&size=20&subscriberEmail=${userObject?.email}`,
     queryKey: ["GetSubscriptionsForViewer"],
