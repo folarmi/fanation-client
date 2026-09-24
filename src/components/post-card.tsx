@@ -521,6 +521,19 @@
 // gifting, subscribe-gated content. The JSX for these already exists below
 // — they just won't render while `post.locked` / `post.price` are undefined.
 
+// src/components/cards/PostCard.tsx
+//
+// This is your new project's card (design system, layout, locked/PPV/gift
+// treatment) rewired to real data instead of the mock `useAppStore`. It
+// replaces BOTH the old `PostCard.tsx` and `FeedPost.tsx` — view tracking
+// is folded in here rather than living in a separate wrapper.
+//
+// What's live today: reactions, bookmark, comments, view tracking, poll
+// display, media (single or multiple files).
+// What's dormant until the backend ships the fields: locked/PPV unlock,
+// gifting, subscribe-gated content. The JSX for these already exists below
+// — they just won't render while `post.locked` / `post.price` are undefined.
+
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Avatar, Icon, Loop, Menu, Photo, SIZES, Verified } from "@/lib/ui";
@@ -536,6 +549,7 @@ import {
   type FeedPost,
 } from "@/lib/adapters/content";
 import { useContentInteractions } from "@/hooks/useContentInteractions";
+import { CommentComposer } from "./comment-composer";
 
 const MEDIA_H = 420;
 const LOCKED_H = 320;
@@ -695,7 +709,6 @@ export function PostCard({ raw }: { raw: RawContent }) {
   const isSub = false; // TODO: wire once subscription-per-post data exists; see FollowBtn for the query shape
 
   const [showComments, setShowComments] = useState(false);
-  const [commentText, setCommentText] = useState("");
   const [reportedLocally, setReportedLocally] = useState(false);
 
   // View tracking, folded in from the old FeedPost wrapper.
@@ -715,13 +728,6 @@ export function PostCard({ raw }: { raw: RawContent }) {
     observer.observe(rootRef.current);
     return () => observer.disconnect();
   }, []);
-
-  const sendComment = () => {
-    const v = commentText.trim();
-    if (!v) return;
-    addComment(v);
-    setCommentText("");
-  };
 
   const menu = mine
     ? [
@@ -793,7 +799,7 @@ export function PostCard({ raw }: { raw: RawContent }) {
           </div>
         </div>
         <div className="row gap8">
-          {!mine && <FollowBtn username={post.raw.createdBy} />}
+          {!mine && <FollowBtn username={post.handle} />}
           <Menu items={menu} />
         </div>
       </div>
@@ -952,24 +958,7 @@ export function PostCard({ raw }: { raw: RawContent }) {
               </div>
             </div>
           ))}
-          <div className="row gap10" style={{ marginTop: 8 }}>
-            <Avatar name="You" size={32} />
-            <input
-              className="input"
-              placeholder="Add a comment…"
-              value={commentText}
-              style={{ padding: "9px 13px" }}
-              onChange={(e) => setCommentText(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && sendComment()}
-            />
-            <button
-              className="btn btn-blue btn-sm"
-              disabled={!commentText.trim()}
-              onClick={sendComment}
-            >
-              <Icon n="send" s={15} />
-            </button>
-          </div>
+          <CommentComposer onSubmit={addComment} />
         </div>
       )}
     </div>

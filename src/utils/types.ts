@@ -312,3 +312,8 @@ export interface StoryPost {
   replies: StoryPost[];
   content?: any;
 }
+
+export type MediaItem = {
+  mediaType: MediaType;
+  mediaLink: string;
+};

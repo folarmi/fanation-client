@@ -1,4 +1,5 @@
 import { UAParser } from "ua-parser-js";
+import { MediaType } from "./types";
 
 export interface GeolocationCoords {
   latitude: number;
@@ -251,4 +252,16 @@ export const formatTimeAgo = (
 
   const years = Math.floor(days / 365);
   return `${years}y ago`;
+};
+
+export const getMediaType = (files: File[]): MediaType => {
+  if (files.length === 0) return "PHOTO";
+
+  const firstFile = files[0];
+  const fileType = firstFile.type;
+
+  if (fileType.startsWith("image/")) return "PHOTO";
+  if (fileType.startsWith("video/")) return "VIDEO";
+  if (fileType.startsWith("audio/")) return "AUDIO";
+  return "DOCUMENT";
 };

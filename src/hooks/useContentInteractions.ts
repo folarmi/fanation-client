@@ -14,6 +14,12 @@ import { useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCustomMutation } from "@/hooks/api/use-api";
 import type { RawContent } from "@/lib/adapters/content";
+import type {
+  MediaItem,
+  Reaction,
+  ReactionType,
+  BookMark,
+} from "@/utils/types";
 
 /** Runs `updater` against every mounted variant of the GetContents list
  *  cache (all search terms / filters), so an optimistic update shows up
@@ -66,9 +72,10 @@ export function useContentInteractions(publicId: string, viewerEmail?: string) {
     endpoint: `contents/saves`,
     onSuccessCallback: invalidate,
   });
-  // TODO: confirm this endpoint — modeled on the view/reaction pattern above.
+  // Matches the old project's convention: replying to content `id` posts to
+  // `contents/{id}/replies` (see CommentBox.tsx's mutationEndpoint).
   const commentMutation = useCustomMutation({
-    endpoint: `contents/${publicId}/comments`,
+    endpoint: `contents/${publicId}/replies`,
     onSuccessCallback: invalidate,
   });
   const viewMutation = useCustomMutation({
@@ -76,15 +83,27 @@ export function useContentInteractions(publicId: string, viewerEmail?: string) {
     onSuccessCallback: () => {},
   });
 
-  function react(type: string) {
-    const isRemoving = false; // caller passes null via removeReaction() instead
-    updateCache(publicId, (post) => ({
-      ...post,
-      reactions: [
-        ...(post.reactions ?? []).filter((r) => r.createdBy !== viewerEmail),
-        { publicId: `temp-${Date.now()}`, createdBy: viewerEmail ?? "", type },
-      ],
-    }));
+  // `type` is now ReactionType (not a bare string) so the optimistic object
+  // below satisfies `Reaction` without a cast.
+  function react(type: ReactionType) {
+    const now = new Date().toISOString();
+    updateCache(publicId, (post) => {
+      const optimistic: Reaction = {
+        publicId: `temp-${Date.now()}`,
+        createdBy: viewerEmail ?? "",
+        lastModifiedBy: viewerEmail ?? "",
+        createdDate: now,
+        lastModifiedDate: now,
+        type,
+      };
+      return {
+        ...post,
+        reactions: [
+          ...(post.reactions ?? []).filter((r) => r.createdBy !== viewerEmail),
+          optimistic,
+        ],
+      };
+    });
     reactMutation.mutate({ pubId: publicId, reactionType: type });
   }
 
@@ -101,19 +120,44 @@ export function useContentInteractions(publicId: string, viewerEmail?: string) {
   function toggleBookmark() {
     updateCache(publicId, (post) => {
       const already = post.bookmarkers?.some((b) => b.email === viewerEmail);
+      if (already) {
+        return {
+          ...post,
+          bookmarkers: post.bookmarkers?.filter((b) => b.email !== viewerEmail),
+        };
+      }
+      // BookMark requires name/profilePic/username, which this hook only
+      // has an email for. These placeholders are fine — this entry only
+      // exists until `invalidate()` refetches the real bookmarker list a
+      // moment later, and the only field the UI actually reads is `email`
+      // (see FeedPost.isBookmarked in content-adapter.ts).
+      const optimistic: BookMark = {
+        email: viewerEmail ?? "",
+        name: "",
+        profilePic: "",
+        username: "",
+      };
       return {
         ...post,
-        bookmarkers: already
-          ? post.bookmarkers?.filter((b) => b.email !== viewerEmail)
-          : [...(post.bookmarkers ?? []), { email: viewerEmail ?? "" }],
+        bookmarkers: [...(post.bookmarkers ?? []), optimistic],
       };
     });
     saveMutation.mutate({ contentPublicId: publicId, saveType: "BOOKMARK" });
   }
 
-  function addComment(text: string) {
-    if (!text.trim()) return;
-    commentMutation.mutate({ message: text });
+  function addComment(payload: {
+    message: string;
+    mentions?: string[];
+    mediaFiles?: MediaItem[];
+    mediaType?: string;
+  }) {
+    if (!payload.message.trim() && !payload.mediaFiles?.length) return;
+    commentMutation.mutate({
+      message: payload.message,
+      mentions: payload.mentions ?? [],
+      mediaFiles: payload.mediaFiles ?? [],
+      mediaType: payload.mediaType,
+    });
   }
 
   const hasRecordedView = useRef(false);
