@@ -521,19 +521,6 @@
 // gifting, subscribe-gated content. The JSX for these already exists below
 // — they just won't render while `post.locked` / `post.price` are undefined.
 
-// src/components/cards/PostCard.tsx
-//
-// This is your new project's card (design system, layout, locked/PPV/gift
-// treatment) rewired to real data instead of the mock `useAppStore`. It
-// replaces BOTH the old `PostCard.tsx` and `FeedPost.tsx` — view tracking
-// is folded in here rather than living in a separate wrapper.
-//
-// What's live today: reactions, bookmark, comments, view tracking, poll
-// display, media (single or multiple files).
-// What's dormant until the backend ships the fields: locked/PPV unlock,
-// gifting, subscribe-gated content. The JSX for these already exists below
-// — they just won't render while `post.locked` / `post.price` are undefined.
-
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Avatar, Icon, Loop, Menu, Photo, SIZES, Verified } from "@/lib/ui";
@@ -552,15 +539,6 @@ import { useContentInteractions } from "@/hooks/useContentInteractions";
 
 const MEDIA_H = 420;
 const LOCKED_H = 320;
-
-// Emoji reactions, kept design-system-agnostic on purpose — an emoji looks
-// right whether it's sitting in a Tailwind button or a "pill" class.
-const REACTIONS = [
-  { type: "LIKE", emoji: "👍" },
-  { type: "DISLIKE", emoji: "👎" },
-  { type: "LOVE", emoji: "❤️" },
-  { type: "LOL", emoji: "😂" },
-] as const;
 
 export function FollowBtn({ username }: { username: string }) {
   const queryClient = useQueryClient();
@@ -627,7 +605,7 @@ function MediaTile({
   playing: boolean;
   onToggle: () => void;
 }) {
-  const isVideo = file.type === "VIDEO";
+  const isVideo = file.isVideo;
   return (
     <div
       onClick={isVideo ? onToggle : undefined}
@@ -711,7 +689,7 @@ export function PostCard({ raw }: { raw: RawContent }) {
   const { userObject } = useAppSelector((s: RootState) => s.auth);
   const post = mapContentToFeedPost(raw, userObject?.email);
   const { react, removeReaction, toggleBookmark, addComment, recordView } =
-    useContentInteractions(post?.id, userObject?.email);
+    useContentInteractions(post.id, userObject?.email);
 
   const mine = post.authorEmail === userObject?.email;
   const isSub = false; // TODO: wire once subscription-per-post data exists; see FollowBtn for the query shape
@@ -723,10 +701,7 @@ export function PostCard({ raw }: { raw: RawContent }) {
   // View tracking, folded in from the old FeedPost wrapper.
   const rootRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (
-      !rootRef?.current ||
-      post?.raw?.viewers?.includes(userObject?.email ?? "")
-    )
+    if (!rootRef.current || post.raw.viewers?.includes(userObject?.email ?? ""))
       return;
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -818,7 +793,7 @@ export function PostCard({ raw }: { raw: RawContent }) {
           </div>
         </div>
         <div className="row gap8">
-          {!mine && <FollowBtn username={post?.raw?.createdBy} />}
+          {!mine && <FollowBtn username={post.raw.createdBy} />}
           <Menu items={menu} />
         </div>
       </div>
@@ -920,12 +895,18 @@ export function PostCard({ raw }: { raw: RawContent }) {
         <div className="row gap20 postacts">
           <button
             className="row gap6 muted"
-            onClick={() => (post.myReaction ? removeReaction() : react("LIKE"))}
-            style={{ color: post.myReaction ? "var(--coral-ink)" : "" }}
+            onClick={() =>
+              post.myReaction === "LIKE" ? removeReaction() : react("LIKE")
+            }
+            style={{
+              color: post.myReaction === "LIKE" ? "var(--coral-ink)" : "",
+            }}
           >
-            {post.myReaction
-              ? REACTIONS.find((r) => r.type === post.myReaction)?.emoji
-              : "👍"}
+            <Icon
+              n="heart"
+              s={19}
+              fill={post.myReaction === "LIKE" ? "var(--coral-ink)" : undefined}
+            />
             {post.counts.reactions}
           </button>
           <button
@@ -960,11 +941,12 @@ export function PostCard({ raw }: { raw: RawContent }) {
               className="row gap10"
               style={{ padding: "7px 0", alignItems: "flex-start" }}
             >
-              <Avatar name={c.who} size={30} />
+              <Avatar name={c.mine ? "You" : c.authorEmail} size={30} />
               <div className="col">
                 <span className="t13">
-                  <b className="uname">{c.who}</b>{" "}
-                  <span className="muted2">@{c.handle}</span>
+                  <b className="uname">
+                    {c.mine ? "You" : c.authorEmail.split("@")[0]}
+                  </b>
                 </span>
                 <span className="t14">{c.text}</span>
               </div>

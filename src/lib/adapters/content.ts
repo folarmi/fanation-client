@@ -1,84 +1,32 @@
 // src/lib/adapters/content.ts
 //
 // This file is the ONLY place that should know what the backend's JSON
-// currently looks like. The card component never touches `raw` fields
+// actually looks like. The card component never touches raw fields
 // directly — it only sees `FeedPost`. When the backend adds a feature
-// (a new reaction type, a paywall field, a repost count), you extend
-// `RawContent` and `mapContentToFeedPost` here, and the component below
-// keeps working unmodified.
+// (a new reaction type, a paywall field, per-comment author info), you
+// extend this file, and the component keeps working unmodified.
+//
+// The raw types (StoryPost, MediaFile, PostComment, PollChoice, ...) are
+// imported from your real `@/utils/types` — this file doesn't redefine
+// them, so it can't drift out of sync with what the backend team maintains.
 
-export interface RawCreator {
-  name: string;
-  username: string;
-  profilePic?: string;
-  verified?: boolean;
-  live?: boolean;
-}
+import type { StoryPost, MediaFile, PollChoice } from "@/utils/types";
 
-export interface RawMediaFile {
+/** Alias kept so PostCard.tsx / FeedPage.tsx don't need to change their
+ *  imports — `RawContent` just IS `StoryPost`. */
+export type RawContent = StoryPost;
+
+export interface FeedMedia {
   url: string;
-  type?: "IMAGE" | "VIDEO" | string;
-  duration?: string; // e.g. "0:42", if the backend ever sends one
+  isVideo: boolean;
+  duration?: string; // not in MediaFile today; stays optional for when it is
 }
 
-export interface RawReaction {
-  publicId?: string;
-  createdBy: string;
-  type: string; // "LIKE" | "DISLIKE" | "LOVE" | "LOL" | whatever comes next
-}
-
-export interface RawComment {
-  publicId: string;
-  author: RawCreator;
-  message: string;
-  createdDate?: string;
-}
-
-export interface RawPollChoice {
-  label: string;
-  votes?: number;
-  votedByMe?: boolean;
-}
-
-/**
- * The shape you pasted from the backend, typed. `[key: string]: unknown`
- * means a brand-new field the backend starts sending tomorrow won't get
- * stripped out by TypeScript — it just won't be *used* until you promote
- * it into a real field below.
- */
-export interface RawContent {
-  publicId: string;
-  createdBy: string;
-  createdDate: string;
-  lastModifiedDate?: string;
-  creator: RawCreator;
-  message?: string;
-  mediaFiles?: RawMediaFile[];
-  reactions?: RawReaction[];
-  comments?: RawComment[];
-  bookmarkers?: { email: string }[];
-  reposters?: { email: string }[];
-  viewers?: string[];
-  mentions?: unknown[];
-  pollChoices?: RawPollChoice[];
-  pollDuration?: { days: number; hours: number; minutes: number };
-  published?: boolean;
-
-  // --- Not in today's payload, but the shape the UI is already built for.
-  // Reading them defensively now means the "locked post" / "PPV" / "gift"
-  // UI in PostCard.tsx lights up the moment the backend ships these,
-  // with ZERO changes to this file or the component.
-  visibility?: "PUBLIC" | "SUBSCRIBERS_ONLY" | "LOCKED";
-  price?: number; // coins to unlock, once `visibility === "LOCKED"` exists
-
-  meta?: {
-    reactionCount?: number;
-    commentCount?: number;
-    viewCount?: number;
-    [key: string]: unknown;
-  };
-
-  [key: string]: unknown;
+export interface FeedComment {
+  id: string;
+  authorEmail: string;
+  mine: boolean;
+  text: string;
 }
 
 export interface FeedPost {
@@ -92,7 +40,7 @@ export interface FeedPost {
   createdAt: string;
   text?: string;
 
-  media: RawMediaFile[];
+  media: FeedMedia[];
 
   poll: { label: string; pct: number }[] | null;
   pollVotedIndex: number | null;
@@ -109,15 +57,35 @@ export interface FeedPost {
   myReaction: string | null;
   isBookmarked: boolean;
 
-  comments: { id: string; who: string; handle: string; text: string }[];
+  comments: FeedComment[];
 
-  /** Escape hatch — anything not promoted above is still here, unmodified. */
+  /** Escape hatch — the untouched raw object, for anything not promoted above. */
   raw: RawContent;
 }
 
-// Keep this list in one place; adding a fifth reaction type later is a
-// one-line change here (and in the emoji map in PostCard.tsx).
 const REACTION_TYPES = ["LIKE", "DISLIKE", "LOVE", "LOL"] as const;
+
+function mapMedia(file: MediaFile): FeedMedia {
+  return {
+    url: file.mediaLink,
+    isVideo: file.mediaType === "VIDEO",
+    // MediaFile has no duration field yet — reading it defensively means
+    // the moment the backend adds one, this line just starts working.
+    duration: (file as { duration?: string }).duration,
+  };
+}
+
+function mapPollChoice(
+  choice: PollChoice,
+  viewerEmail: string | undefined,
+  totalVotes: number,
+): { label: string; pct: number } {
+  const voteCount = choice.votes?.length ?? 0;
+  return {
+    label: choice.choice,
+    pct: totalVotes ? Math.round((voteCount / totalVotes) * 100) : 0,
+  };
+}
 
 export function mapContentToFeedPost(
   raw: RawContent,
@@ -135,12 +103,14 @@ export function mapContentToFeedPost(
   const myReaction =
     reactions.find((r) => r.createdBy === viewerEmail)?.type ?? null;
 
-  const totalVotes = (raw?.pollChoices ?? []).reduce(
-    (sum, c) => sum + (c?.votes ?? 0),
+  const pollChoices = raw?.pollChoices ?? [];
+  const totalVotes = pollChoices.reduce(
+    (sum, c) => sum + (c.votes?.length ?? 0),
     0,
   );
-
-  const votedIndex = raw?.pollChoices?.findIndex((c) => c.votedByMe) ?? -1;
+  const votedIndex = pollChoices.findIndex((c) =>
+    c.votes?.includes(viewerEmail ?? ""),
+  );
 
   return {
     id: raw?.publicId,
@@ -148,24 +118,27 @@ export function mapContentToFeedPost(
     who: raw?.creator?.name || "Unknown User",
     handle: raw?.creator?.username || "",
     avatar: raw?.creator?.profilePic,
-    verified: !!raw?.creator?.verified,
-    live: !!raw?.creator?.live,
+    // PostCreator has no `verified`/`live` fields today — these come from
+    // the mock creator directory elsewhere in the app for now. Defaulting
+    // to false here rather than guessing keeps this file honest about what
+    // the backend actually sends.
+    verified: false,
+    live: false,
     createdAt: raw?.createdDate,
     text: raw?.message,
 
-    media: raw?.mediaFiles ?? [],
+    media: (raw?.mediaFiles ?? []).map(mapMedia),
 
-    poll: raw?.pollChoices?.length
-      ? raw?.pollChoices.map((c) => ({
-          label: c.label,
-          pct: totalVotes ? Math.round(((c.votes ?? 0) / totalVotes) * 100) : 0,
-        }))
+    poll: pollChoices.length
+      ? pollChoices.map((c) => mapPollChoice(c, viewerEmail, totalVotes))
       : null,
     pollVotedIndex: votedIndex === -1 ? null : votedIndex,
     pollDuration: raw?.pollDuration,
 
-    locked: raw?.visibility === "LOCKED",
-    price: raw?.price,
+    // Not sent by the backend yet — see RawContent's source type. Stays
+    // `false`/`undefined` until StoryPost grows a `visibility`/`price` field.
+    locked: false,
+    price: undefined,
 
     counts: {
       reactions: raw?.meta?.reactionCount ?? reactions.length,
@@ -176,10 +149,15 @@ export function mapContentToFeedPost(
     isBookmarked:
       raw?.bookmarkers?.some((b) => b.email === viewerEmail) ?? false,
 
+    // PostComment carries only `createdBy` (an email) — no name, no
+    // username. There is currently no way to show a real display name for
+    // someone else's comment without a separate user lookup. "mine" is the
+    // one thing we CAN tell for certain; the component decides how to
+    // render the rest (e.g. "You" vs. the email's local part).
     comments: (raw?.comments ?? []).map((c) => ({
       id: c.publicId,
-      who: c.author?.name || "Unknown",
-      handle: c.author?.username || "",
+      authorEmail: c.createdBy,
+      mine: c.createdBy === viewerEmail,
       text: c.message,
     })),
 
