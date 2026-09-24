@@ -534,6 +534,19 @@
 // gifting, subscribe-gated content. The JSX for these already exists below
 // — they just won't render while `post.locked` / `post.price` are undefined.
 
+// src/components/cards/PostCard.tsx
+//
+// This is your new project's card (design system, layout, locked/PPV/gift
+// treatment) rewired to real data instead of the mock `useAppStore`. It
+// replaces BOTH the old `PostCard.tsx` and `FeedPost.tsx` — view tracking
+// is folded in here rather than living in a separate wrapper.
+//
+// What's live today: reactions, bookmark, comments, view tracking, poll
+// display, media (single or multiple files).
+// What's dormant until the backend ships the fields: locked/PPV unlock,
+// gifting, subscribe-gated content. The JSX for these already exists below
+// — they just won't render while `post.locked` / `post.price` are undefined.
+
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Avatar, Icon, Loop, Menu, Photo, SIZES, Verified } from "@/lib/ui";
@@ -549,6 +562,7 @@ import {
   type FeedPost,
 } from "@/lib/adapters/content";
 import { useContentInteractions } from "@/hooks/useContentInteractions";
+import { MediaLightbox } from "./media-light-box";
 import { CommentComposer } from "./comment-composer";
 
 const MEDIA_H = 420;
@@ -607,36 +621,37 @@ export function FollowBtn({ username }: { username: string }) {
   );
 }
 
-/** One media item — photo or video, autoplay-when-in-view like the mock version. */
+/** One media item — photo, or a silent autoplay-when-in-view preview for
+ *  video (Instagram-feed style). Clicking either kind opens the lightbox,
+ *  where video actually gets a real <video controls> element and multiple
+ *  items become a carousel — see MediaLightbox.tsx. */
 function MediaTile({
   file,
   height,
-  playing,
-  onToggle,
+  onOpen,
 }: {
   file: FeedPost["media"][number];
   height: number;
-  playing: boolean;
-  onToggle: () => void;
+  onOpen: () => void;
 }) {
   const isVideo = file.isVideo;
   return (
     <div
-      onClick={isVideo ? onToggle : undefined}
+      onClick={onOpen}
       style={{
         height,
         borderRadius: 14,
         position: "relative",
         overflow: "hidden",
-        cursor: isVideo ? "pointer" : "default",
+        cursor: "pointer",
       }}
     >
       {isVideo ? (
-        <Loop src={file.url} poster={undefined} active={playing} radius={14} />
+        <Loop src={file.url} poster={undefined} active radius={14} />
       ) : (
         <Photo sizes={SIZES.feedCard} src={file.url} alt="" radius={14} />
       )}
-      {isVideo && !playing && (
+      {isVideo && (
         <div className="row center" style={{ position: "absolute", inset: 0 }}>
           <div
             className="feature-ic"
@@ -658,43 +673,45 @@ function MediaTile({
   );
 }
 
-/** 0..N media files. Single file = full-width block; multiple = a simple grid.
- *  This is the one part of the visual layer that genuinely differs from the
- *  mock version, because the mock only ever had one image per post. */
+/** 0..N media files. Single file = full-width block; multiple = a simple
+ *  grid — but unlike the old project, every tile in that grid opens the SAME
+ *  lightbox instance scoped to this post's whole media list, at the index
+ *  clicked, so you can carousel through the rest from wherever you started. */
 function PostMedia({ media }: { media: FeedPost["media"] }) {
-  const [playingIdx, setPlayingIdx] = useState<number | null>(0);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   if (!media.length) return null;
 
-  if (media.length === 1) {
-    return (
-      <MediaTile
-        file={media[0]}
-        height={MEDIA_H}
-        playing={playingIdx === 0}
-        onToggle={() => setPlayingIdx((v) => (v === 0 ? null : 0))}
-      />
-    );
-  }
-
   return (
-    <div
-      className="grid"
-      style={{
-        display: "grid",
-        gridTemplateColumns: "1fr 1fr",
-        gap: 6,
-      }}
-    >
-      {media.slice(0, 4).map((file, i) => (
+    <>
+      {media.length === 1 ? (
         <MediaTile
-          key={i}
-          file={file}
-          height={MEDIA_H / 2 - 3}
-          playing={playingIdx === i}
-          onToggle={() => setPlayingIdx((v) => (v === i ? null : i))}
+          file={media[0]}
+          height={MEDIA_H}
+          onOpen={() => setLightboxIndex(0)}
         />
-      ))}
-    </div>
+      ) : (
+        <div
+          className="grid"
+          style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}
+        >
+          {media.slice(0, 4).map((file, i) => (
+            <MediaTile
+              key={i}
+              file={file}
+              height={MEDIA_H / 2 - 3}
+              onOpen={() => setLightboxIndex(i)}
+            />
+          ))}
+        </div>
+      )}
+      {lightboxIndex !== null && (
+        <MediaLightbox
+          items={media}
+          startIndex={lightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+        />
+      )}
+    </>
   );
 }
 
