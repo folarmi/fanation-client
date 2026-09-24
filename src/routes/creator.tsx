@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { SEED_FEED, byHandle, useAppStore } from "@/lib/core";
+import { byHandle, useAppStore } from "@/lib/core";
 import {
   Avatar,
   Icon,
@@ -21,7 +21,7 @@ export default function CreatorProfilePage() {
   const c = byHandle(handle);
   const [tab, setTab] = useState("Posts");
   const isSub = !!S.subs[c.handle];
-  const posts = SEED_FEED.filter((p) => p.h === c.handle).slice(0, 6);
+  // const posts = SEED_FEED.filter((p) => p.h === c.handle).slice(0, 6);
 
   const { data: profileData } = useGetData({
     url: `profile/${handle}`,

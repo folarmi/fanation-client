@@ -21,6 +21,7 @@ import { useAppSelector } from "@/services/hook";
 import { RootState } from "@/services/store";
 import { CreatorUser } from "@/utils/types";
 import type { RawContent } from "@/lib/adapters/content";
+import { decodeToken } from "@/utils/helper";
 
 /* Each person's story is a short reel, not one frame — 2 to 4 segments,
    picked deterministically per handle so the count doesn't reshuffle on
@@ -344,10 +345,10 @@ export default function FeedPage() {
     const all =
       (getAllCreators as { data?: { content?: CreatorUser[] } } | undefined)
         ?.data?.content || [];
-    const currentUserId = userObject?.usid;
+    const currentUserName = decodeToken(userObject?.accessToken)?.username;
     return all.filter(
       (creator) =>
-        creator.publicId !== currentUserId &&
+        creator?.username !== currentUserName &&
         !S.blocked[creator.username] &&
         !S.muted[creator.username],
     );
