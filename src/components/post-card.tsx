@@ -1,121 +1,77 @@
-// import { useState } from "react";
+// // src/components/cards/PostCard.tsx
+// //
+// // This is your new project's card (design system, layout, locked/PPV/gift
+// // treatment) rewired to real data instead of the mock `useAppStore`. It
+// // replaces BOTH the old `PostCard.tsx` and `FeedPost.tsx` — view tracking
+// // is folded in here rather than living in a separate wrapper.
+// //
+// // What's live today: reactions, bookmark, comments, view tracking, poll
+// // display, media (single or multiple files).
+// // What's dormant until the backend ships the fields: locked/PPV unlock,
+// // gifting, subscribe-gated content. The JSX for these already exists below
+// // — they just won't render while `post.locked` / `post.price` are undefined.
+
+// // src/components/cards/PostCard.tsx
+// //
+// // This is your new project's card (design system, layout, locked/PPV/gift
+// // treatment) rewired to real data instead of the mock `useAppStore`. It
+// // replaces BOTH the old `PostCard.tsx` and `FeedPost.tsx` — view tracking
+// // is folded in here rather than living in a separate wrapper.
+// //
+// // What's live today: reactions, bookmark, comments, view tracking, poll
+// // display, media (single or multiple files).
+// // What's dormant until the backend ships the fields: locked/PPV unlock,
+// // gifting, subscribe-gated content. The JSX for these already exists below
+// // — they just won't render while `post.locked` / `post.price` are undefined.
+
+// // src/components/cards/PostCard.tsx
+// //
+// // This is your new project's card (design system, layout, locked/PPV/gift
+// // treatment) rewired to real data instead of the mock `useAppStore`. It
+// // replaces BOTH the old `PostCard.tsx` and `FeedPost.tsx` — view tracking
+// // is folded in here rather than living in a separate wrapper.
+// //
+// // What's live today: reactions, bookmark, comments, view tracking, poll
+// // display, media (single or multiple files).
+// // What's dormant until the backend ships the fields: locked/PPV unlock,
+// // gifting, subscribe-gated content. The JSX for these already exists below
+// // — they just won't render while `post.locked` / `post.price` are undefined.
+
+// import { useEffect, useRef, useState } from "react";
 // import { useNavigate } from "react-router-dom";
-// import { byHandle, seedCommentsFor, useAppStore } from "@/lib/core";
-// import type { Post } from "@/lib/core";
-// import {
-//   Avatar,
-//   Icon,
-//   Loop,
-//   Menu,
-//   Photo,
-//   SIZES,
-//   Verified,
-//   postMediaFor,
-//   postVideoFor,
-//   useInView,
-// } from "@/lib/ui";
+// import { Avatar, Icon, Loop, Menu, Photo, SIZES, Verified } from "@/lib/ui";
 // import { useCustomMutation, useGetData } from "@/hooks/api/use-api";
 // import { useQueryClient } from "@tanstack/react-query";
 // import { useAppSelector } from "@/services/hook";
-// import { RootState } from "@/services/store";
-// import { isActivelySubscribed } from "@/utils/helper";
-// import { CreatorUser } from "@/utils/types";
+// import type { RootState } from "@/services/store";
+// import { formatTimeAgo, isActivelySubscribed } from "@/utils/helper";
+// import type { CreatorUser } from "@/utils/types";
+// import {
+//   mapContentToFeedPost,
+//   type RawContent,
+//   type FeedPost,
+// } from "@/lib/adapters/content";
+// import { useContentInteractions } from "@/hooks/useContentInteractions";
+// import { MediaLightbox } from "./media-light-box";
+// import { CommentComposer } from "./comment-composer";
 
-// /**
-//  * The feed column is 640 wide and the photographs are cropped 3:2, so 420 is
-//  * very close to the height the picture wants to be — the frame crops a sliver
-//  * off the top and bottom rather than slicing the subject in half. The lock is
-//  * shorter on purpose: it is a teaser, and a shorter frame reads as one.
-//  */
 // const MEDIA_H = 420;
 // const LOCKED_H = 320;
 
-// /**
-//  * The media on a post.
-//  *
-//  * Video posts autoplay muted, the way Instagram's web feed does, but only
-//  * while they are on screen — `useInView` is what keeps the other eight clips
-//  * paused on their poster frame. Clicking toggles play, so a person who wants a
-//  * still can have one. There is no sound control here: the loops carry no audio
-//  * track, and a speaker button that does nothing is worse than no button.
-//  */
-// function PostMedia({
-//   p,
-//   onToggle,
-//   playing,
-// }: {
-//   p: Post;
-//   playing: boolean;
-//   onToggle: () => void;
-// }) {
-//   const [ref, inView] = useInView<HTMLDivElement>(0.4);
-//   const src = postMediaFor(p);
-//   const loop = postVideoFor(p);
-//   const isVideo = p.type === "video" && !!loop;
-
-//   return (
-//     <div
-//       ref={ref}
-//       onClick={isVideo ? onToggle : undefined}
-//       style={{
-//         height: MEDIA_H,
-//         borderRadius: 14,
-//         position: "relative",
-//         overflow: "hidden",
-//         cursor: isVideo ? "pointer" : "default",
-//       }}
-//     >
-//       {isVideo ? (
-//         <Loop src={loop} poster={src} active={inView && playing} radius={14} />
-//       ) : (
-//         <Photo
-//           sizes={SIZES.feedCard}
-//           src={src}
-//           seed={p.seed}
-//           alt=""
-//           radius={14}
-//         />
-//       )}
-//       {isVideo && !playing && (
-//         <div className="row center" style={{ position: "absolute", inset: 0 }}>
-//           <div
-//             className="feature-ic"
-//             style={{ width: 56, height: 56, background: "rgba(0,0,0,.42)" }}
-//           >
-//             <Icon n="play" s={24} c="#fff" fill="#fff" />
-//           </div>
-//         </div>
-//       )}
-//       {p.dur && (
-//         <div
-//           className="pill t12 onart"
-//           style={{ position: "absolute", bottom: 10, right: 10 }}
-//         >
-//           {p.dur}
-//         </div>
-//       )}
-//     </div>
-//   );
-// }
-
-// export function FollowBtn({ publicId }: { publicId: string }) {
+// export function FollowBtn({ username }: { username: string }) {
 //   const queryClient = useQueryClient();
-//   const { userObject } = useAppSelector((state: RootState) => state.auth);
+//   const { userObject } = useAppSelector((s: RootState) => s.auth);
 
-//   const { data: getViewerSubscriptions, isLoading: subsLoading } = useGetData({
+//   const { data, isLoading: subsLoading } = useGetData({
 //     url: `subscriptions?page=0&size=20&subscriberEmail=${userObject?.email}`,
 //     queryKey: ["GetSubscriptionsForViewer"],
 //   });
 
 //   const currentSub = isActivelySubscribed(
-//     (
-//       getViewerSubscriptions as
-//         | { data?: { content?: CreatorUser[] } }
-//         | undefined
-//     )?.data?.content ?? [],
-//     publicId,
+//     (data as { data?: { content?: CreatorUser[] } } | undefined)?.data
+//       ?.content ?? [],
+//     username,
 //   );
-
 //   const isSubscribed = currentSub ? currentSub.isActive : false;
 
 //   const invalidate = () =>
@@ -125,11 +81,10 @@
 //     });
 
 //   const subscribeMutation = useCustomMutation({
-//     endpoint: `subscriptions/subscribe/${publicId}`,
+//     endpoint: `subscriptions/subscribe/${username}`,
 //     successMessage: () => "Followed",
 //     onSuccessCallback: invalidate,
 //   });
-
 //   const unsubscribeMutation = useCustomMutation({
 //     method: "delete",
 //     endpoint: `subscriptions/unsubscribe/${currentSub?.subscription?.publicId}`,
@@ -140,19 +95,15 @@
 //   const isPending =
 //     subscribeMutation.isPending || unsubscribeMutation.isPending;
 
-//   const handleClick = (e: React.MouseEvent) => {
-//     e.stopPropagation();
-//     if (isSubscribed) {
-//       unsubscribeMutation.mutate({});
-//     } else {
-//       subscribeMutation.mutate({});
-//     }
-//   };
-
 //   return (
 //     <button
 //       className={"btn btn-sm " + (isSubscribed ? "btn-ghost" : "btn-blue")}
-//       onClick={handleClick}
+//       onClick={(e) => {
+//         e.stopPropagation();
+//         isSubscribed
+//           ? unsubscribeMutation.mutate({})
+//           : subscribeMutation.mutate({});
+//       }}
 //       disabled={isPending || subsLoading}
 //     >
 //       {isSubscribed ? "Following" : "Follow"}
@@ -160,84 +111,182 @@
 //   );
 // }
 
-// /** Full-action post card — the atom of the fan experience. */
-// export function PostCard({ p }: { p: Post }) {
-//   const S = useAppStore();
+// /** One media item — photo, or a silent autoplay-when-in-view preview for
+//  *  video (Instagram-feed style). Clicking either kind opens the lightbox,
+//  *  where video actually gets a real <video controls> element and multiple
+//  *  items become a carousel — see MediaLightbox.tsx. */
+// function MediaTile({
+//   file,
+//   height,
+//   onOpen,
+// }: {
+//   file: FeedPost["media"][number];
+//   height: number;
+//   onOpen: () => void;
+// }) {
+//   const isVideo = file.isVideo;
+//   return (
+//     <div
+//       onClick={onOpen}
+//       style={{
+//         height,
+//         borderRadius: 14,
+//         position: "relative",
+//         overflow: "hidden",
+//         cursor: "pointer",
+//       }}
+//     >
+//       {isVideo ? (
+//         <Loop src={file.url} poster={undefined} active radius={14} />
+//       ) : (
+//         <Photo sizes={SIZES.feedCard} src={file.url} alt="" radius={14} />
+//       )}
+//       {isVideo && (
+//         <div className="row center" style={{ position: "absolute", inset: 0 }}>
+//           <div
+//             className="feature-ic"
+//             style={{ width: 56, height: 56, background: "rgba(0,0,0,.42)" }}
+//           >
+//             <Icon n="play" s={24} c="#fff" fill="#fff" />
+//           </div>
+//         </div>
+//       )}
+//       {file.duration && (
+//         <div
+//           className="pill t12 onart"
+//           style={{ position: "absolute", bottom: 10, right: 10 }}
+//         >
+//           {file.duration}
+//         </div>
+//       )}
+//     </div>
+//   );
+// }
+
+// /** 0..N media files. Single file = full-width block; multiple = a simple
+//  *  grid — but unlike the old project, every tile in that grid opens the SAME
+//  *  lightbox instance scoped to this post's whole media list, at the index
+//  *  clicked, so you can carousel through the rest from wherever you started. */
+// function PostMedia({ media }: { media: FeedPost["media"] }) {
+//   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+//   if (!media.length) return null;
+
+//   return (
+//     <>
+//       {media.length === 1 ? (
+//         <MediaTile
+//           file={media[0]}
+//           height={MEDIA_H}
+//           onOpen={() => setLightboxIndex(0)}
+//         />
+//       ) : (
+//         <div
+//           className="grid"
+//           style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}
+//         >
+//           {media.slice(0, 4).map((file, i) => (
+//             <MediaTile
+//               key={i}
+//               file={file}
+//               height={MEDIA_H / 2 - 3}
+//               onOpen={() => setLightboxIndex(i)}
+//             />
+//           ))}
+//         </div>
+//       )}
+//       {lightboxIndex !== null && (
+//         <MediaLightbox
+//           items={media}
+//           startIndex={lightboxIndex}
+//           onClose={() => setLightboxIndex(null)}
+//         />
+//       )}
+//     </>
+//   );
+// }
+
+// export function PostCard({ raw }: { raw: RawContent }) {
 //   const navigate = useNavigate();
-//   // `byHandle` falls back to CREATORS[0] for a miss, so "yourhandle" (own
-//   // posts) must be excluded explicitly rather than trusted to come back empty.
-//   const author = p.mine ? null : byHandle(p.h);
-//   const [showC, setShowC] = useState(false);
-//   const [ctext, setCtext] = useState("");
-//   const [playing, setPlaying] = useState(true);
-//   const liked = !!S.liked[p.id];
-//   const savedP = !!S.saved[p.id];
-//   const isSub = !!S.subs[p.h];
-//   const isUnlocked = !!S.unlocked[p.id];
-//   const voted = S.votes[p.id];
-//   const myC = S.comments[p.id] ?? [];
-//   const seeds = p.mine ? [] : seedCommentsFor(p.id);
-//   const sendC = () => {
-//     const v = ctext.trim();
-//     if (!v) return;
-//     S.addComment(p.id, v);
-//     setCtext("");
-//   };
-//   const menu = p.mine
+//   const { userObject } = useAppSelector((s: RootState) => s.auth);
+//   const post = mapContentToFeedPost(raw, userObject?.email);
+//   const { react, removeReaction, toggleBookmark, addComment, recordView } =
+//     useContentInteractions(post.id, userObject?.email);
+
+//   const mine = post.authorEmail === userObject?.email;
+//   const isSub = false; // TODO: wire once subscription-per-post data exists; see FollowBtn for the query shape
+
+//   const [showComments, setShowComments] = useState(false);
+//   const [reportedLocally, setReportedLocally] = useState(false);
+
+//   // View tracking, folded in from the old FeedPost wrapper.
+//   const rootRef = useRef<HTMLDivElement>(null);
+//   useEffect(() => {
+//     if (!rootRef.current || post.raw.viewers?.includes(userObject?.email ?? ""))
+//       return;
+//     const observer = new IntersectionObserver(
+//       ([entry]) => {
+//         if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+//           recordView();
+//           observer.disconnect();
+//         }
+//       },
+//       { threshold: 0.5 },
+//     );
+//     observer.observe(rootRef.current);
+//     return () => observer.disconnect();
+//   }, []);
+
+//   const menu = mine
 //     ? [
 //         {
-//           ic: "repost",
-//           t: "Copy link",
-//           fn: () => S.toast(`Link copied — fanation.app/p/${p.id}`),
+//           ic: "x",
+//           t: "Delete post",
+//           danger: true,
+//           fn: () => {
+//             /* TODO: delete mutation */
+//           },
 //         },
-//         "-" as const,
-//         { ic: "x", t: "Delete post", danger: true, fn: () => S.delPost(p.id) },
 //       ]
 //     : [
 //         {
 //           ic: "bookmark",
-//           t: savedP ? "Remove from collection" : "Save to collection",
-//           fn: () => S.toggleSave(p.id),
-//         },
-//         {
-//           ic: "repost",
-//           t: "Copy link",
-//           fn: () => S.toast(`Link copied — fanation.app/p/${p.id}`),
+//           t: post.isBookmarked
+//             ? "Remove from collection"
+//             : "Save to collection",
+//           fn: toggleBookmark,
 //         },
 //         "-" as const,
-//         { ic: "eye", t: "Not interested", fn: () => S.hide(p.id) },
-//         { ic: "bell", t: `Mute @${p.h}`, fn: () => S.mute(p.h) },
-//         {
-//           ic: "shield",
-//           t: `Block @${p.h}`,
-//           danger: true,
-//           fn: () => S.block(p.h),
-//         },
-//         S.reported[p.id]
+//         // Mute/block/report have no backend endpoint in the sample payload yet.
+//         // Left in place — wire each to a real mutation as the API grows.
+//         reportedLocally
 //           ? { ic: "flag", t: "Reported ✓", off: true }
 //           : {
 //               ic: "flag",
 //               t: "Report post",
 //               danger: true,
-//               fn: () => S.openModal("report", p),
+//               fn: () => setReportedLocally(true),
 //             },
 //       ];
 
 //   return (
-//     <div className="card" style={{ padding: 18 }}>
-//       <div className="row between">
+//     <div
+//       className="card"
+//       style={{ padding: 18 }}
+//       ref={rootRef}
+//       onClick={() => navigate(`/dashboard/${post.id}`)}
+//     >
+//       <div className="row between" onClick={(e) => e.stopPropagation()}>
 //         <div className="row gap12">
 //           <Avatar
-//             name={p.who}
+//             name={post.who}
 //             size={44}
-//             ring={author?.live ? "var(--coral)" : undefined}
-//             onClick={author?.live ? () => navigate(`/live/${p.h}`) : undefined}
+//             ring={post.live ? "var(--coral)" : undefined}
 //           />
 //           <div className="col">
 //             <div className="row gap6">
-//               <span className="b7 t14 uname">{p.who}</span>
-//               {p.v && <Verified />}
-//               {isSub && !p.mine && (
+//               <span className="b7 t14 uname">{post.who}</span>
+//               {post.verified && <Verified />}
+//               {isSub && !mine && (
 //                 <span
 //                   className="tag"
 //                   style={{
@@ -250,57 +299,77 @@
 //                   Subscribed
 //                 </span>
 //               )}
-//               {p.mine && p.vis && (
-//                 <span
-//                   className="tag"
-//                   style={{ padding: "1px 8px", fontSize: 10.5 }}
-//                 >
-//                   {p.vis}
-//                 </span>
-//               )}
 //             </div>
 //             <div className="muted t13">
-//               @{p.h} · {p.t}
+//               @{post.handle} · {formatTimeAgo(post.createdAt)}
 //             </div>
 //           </div>
 //         </div>
-//         <Menu items={menu} />
-//       </div>
-//       <div className="t14" style={{ margin: "13px 0", lineHeight: 1.55 }}>
-//         {p.text}
+//         <div className="row gap8">
+//           {!mine && <FollowBtn username={post.handle} />}
+//           <Menu items={menu} />
+//         </div>
 //       </div>
 
-//       {(p.type === "image" || p.type === "video") && (
-//         <PostMedia
-//           p={p}
-//           playing={playing}
-//           onToggle={() => setPlaying((v) => !v)}
-//         />
+//       {post.text && (
+//         <div
+//           className="t14"
+//           style={{ margin: "13px 0", lineHeight: 1.55 }}
+//           onClick={(e) => e.stopPropagation()}
+//         >
+//           {post.text}
+//         </div>
 //       )}
 
-//       {p.poll && (
-//         <div className="col gap8" style={{ marginBottom: 4 }}>
-//           {p.poll.map((o, i) => {
-//             const pct =
-//               voted == null
-//                 ? o.pct
-//                 : voted === i
-//                   ? Math.min(99, o.pct + 1)
-//                   : Math.max(1, o.pct - 1);
-//             return (
+//       <div onClick={(e) => e.stopPropagation()}>
+//         {/* Locked / PPV — dormant until `visibility`/`price` exist on the payload. */}
+//         {post.locked ? (
+//           <div className="locked" style={{ height: LOCKED_H }}>
+//             <Photo
+//               sizes={SIZES.feedCard}
+//               src={post.media[0]?.url}
+//               blur={10}
+//               scale={1.12}
+//             />
+//             <div className="lockcover">
+//               <div
+//                 className="feature-ic"
+//                 style={{ background: "rgba(37,153,246,.16)" }}
+//               >
+//                 <Icon n="lock" c="var(--blueL)" />
+//               </div>
+//               <div className="b7" style={{ color: "#fff" }}>
+//                 {isSub ? "Pay-per-view drop" : "Exclusive locked content"}
+//               </div>
+//               <div className="row gap8">
+//                 {!isSub && (
+//                   <button className="btn btn-ghost btn-sm">Subscribe</button>
+//                 )}
+//                 <button className="btn btn-blue btn-sm">
+//                   Unlock · {post.price} coins
+//                 </button>
+//               </div>
+//             </div>
+//           </div>
+//         ) : (
+//           <PostMedia media={post.media} />
+//         )}
+
+//         {post.poll && (
+//           <div className="col gap8" style={{ marginBottom: 4, marginTop: 12 }}>
+//             {post.poll.map((o, i) => (
 //               <div
 //                 key={i}
 //                 className="hair"
-//                 onClick={() => {
-//                   if (voted == null) S.vote(p.id, i);
-//                 }}
 //                 style={{
 //                   position: "relative",
 //                   padding: "11px 14px",
 //                   borderRadius: 12,
 //                   overflow: "hidden",
-//                   cursor: voted == null ? "pointer" : "default",
-//                   borderColor: voted === i ? "var(--blue-ink)" : "var(--line)",
+//                   borderColor:
+//                     post.pollVotedIndex === i
+//                       ? "var(--blue-ink)"
+//                       : "var(--line)",
 //                 }}
 //               >
 //                 <div
@@ -309,230 +378,99 @@
 //                     left: 0,
 //                     top: 0,
 //                     bottom: 0,
-//                     width: `${pct}%`,
+//                     width: `${o.pct}%`,
 //                     background:
-//                       voted === i
+//                       post.pollVotedIndex === i
 //                         ? "rgba(37,153,246,.3)"
 //                         : "rgba(37,153,246,.14)",
-//                     transition: ".4s",
 //                   }}
 //                 />
 //                 <div className="row between" style={{ position: "relative" }}>
 //                   <span className="row gap8 b6 t14">
-//                     {voted === i && (
+//                     {post.pollVotedIndex === i && (
 //                       <Icon n="check" s={14} c="var(--blueL-ink)" />
 //                     )}
 //                     {o.label}
 //                   </span>
-//                   <span className="muted t13">{pct}%</span>
+//                   <span className="muted t13">{o.pct}%</span>
 //                 </div>
 //               </div>
-//             );
-//           })}
-//           <div className="muted t12">
-//             {voted == null
-//               ? "1,204 votes · 2 days left"
-//               : "1,205 votes · you voted · 2 days left"}
+//             ))}
 //           </div>
-//         </div>
-//       )}
+//         )}
+//       </div>
 
-//       {p.type === "locked" && !isUnlocked && (
-//         <div className="locked" style={{ height: LOCKED_H }}>
-//           {/* Same photograph the unlocked branch shows, blurred in CSS rather
-//               than pre-blurred into a second file — unlocking has to reveal the
-//               picture the blur was hiding, not swap in a different one. The
-//               oversize scale covers the soft rim a blur leaves at the edges. */}
-//           <Photo
-//             sizes={SIZES.feedCard}
-//             src={postMediaFor(p)}
-//             seed={p.seed}
-//             blur={10}
-//             scale={1.12}
-//           />
-//           <div className="lockcover">
-//             <div
-//               className="feature-ic"
-//               style={{ background: "rgba(37,153,246,.16)" }}
-//             >
-//               <Icon n="lock" c="var(--blueL)" />
-//             </div>
-//             <div className="b7" style={{ color: "#fff" }}>
-//               {isSub ? "Pay-per-view drop" : "Exclusive locked content"}
-//             </div>
-//             <div className="row gap8">
-//               {!isSub && (
-//                 <button
-//                   className="btn btn-ghost btn-sm"
-//                   onClick={() => S.openModal("subscribe", byHandle(p.h))}
-//                 >
-//                   Subscribe
-//                 </button>
-//               )}
-//               <button
-//                 className="btn btn-blue btn-sm"
-//                 onClick={() => S.openModal("ppv", p)}
-//               >
-//                 Unlock · {p.price} coins
-//               </button>
-//             </div>
-//           </div>
-//         </div>
-//       )}
-//       {p.type === "locked" && isUnlocked && (
-//         <div
-//           style={{
-//             height: MEDIA_H,
-//             borderRadius: 14,
-//             position: "relative",
-//             overflow: "hidden",
-//           }}
-//         >
-//           <Photo
-//             sizes={SIZES.feedCard}
-//             src={postMediaFor(p)}
-//             seed={p.seed}
-//             radius={14}
-//           />
-//           <span
-//             className="chip-mint onart"
-//             style={{ position: "absolute", top: 10, left: 10, zIndex: 1 }}
-//           >
-//             <Icon n="check" s={12} />
-//             Unlocked
-//           </span>
-//         </div>
-//       )}
-
-//       {/* `postbar`/`postacts` exist only so the phone breakpoint can tighten these
-//           gaps — at 390px the default 20px spacing runs the row past the card. */}
-//       <div className="row between postbar" style={{ marginTop: 14 }}>
+//       <div
+//         className="row between postbar"
+//         style={{ marginTop: 14 }}
+//         onClick={(e) => e.stopPropagation()}
+//       >
 //         <div className="row gap20 postacts">
 //           <button
 //             className="row gap6 muted"
-//             onClick={() => S.toggleLike(p.id)}
-//             style={{ color: liked ? "var(--coral-ink)" : "" }}
+//             onClick={() =>
+//               post.myReaction === "LIKE" ? removeReaction() : react("LIKE")
+//             }
+//             style={{
+//               color: post.myReaction === "LIKE" ? "var(--coral-ink)" : "",
+//             }}
 //           >
 //             <Icon
 //               n="heart"
 //               s={19}
-//               fill={liked ? "var(--coral-ink)" : undefined}
+//               fill={post.myReaction === "LIKE" ? "var(--coral-ink)" : undefined}
 //             />
-//             {(p.likes + (liked ? 1 : 0)).toLocaleString()}
+//             {post.counts.reactions}
 //           </button>
 //           <button
 //             className="row gap6 muted"
-//             onClick={() => setShowC((v) => !v)}
-//             style={{ color: showC ? "var(--blueL-ink)" : "" }}
+//             onClick={() => setShowComments((v) => !v)}
+//             style={{ color: showComments ? "var(--blueL-ink)" : "" }}
 //           >
 //             <Icon n="comment" s={19} />
-//             {p.comments + myC.length}
+//             {post.counts.comments}
 //           </button>
 //         </div>
-//         <div className="row gap12">
-//           {!p.mine && (
-//             <button
-//               className="btn btn-ghost btn-sm"
-//               onClick={() => S.openModal("gift", byHandle(p.h))}
-//             >
-//               <Icon n="gift" s={15} />
-//               Gift
-//             </button>
-//           )}
-//         </div>
+//         {!mine && (
+//           <button className="btn btn-ghost btn-sm">
+//             <Icon n="gift" s={15} />
+//             Gift
+//           </button>
+//         )}
 //       </div>
 
-//       {showC && (
+//       {showComments && (
 //         <div
 //           style={{
 //             marginTop: 14,
 //             borderTop: "1px solid var(--line)",
 //             paddingTop: 12,
 //           }}
+//           onClick={(e) => e.stopPropagation()}
 //         >
-//           {seeds.map((c, i) => (
+//           {post.comments.map((c) => (
 //             <div
-//               key={i}
+//               key={c.id}
 //               className="row gap10"
 //               style={{ padding: "7px 0", alignItems: "flex-start" }}
 //             >
-//               <Avatar name={c[0]} size={30} />
+//               <Avatar name={c.mine ? "You" : c.authorEmail} size={30} />
 //               <div className="col">
 //                 <span className="t13">
-//                   <b className="uname">{c[0]}</b>{" "}
-//                   <span className="muted2">@{c[1]}</span>
+//                   <b className="uname">
+//                     {c.mine ? "You" : c.authorEmail.split("@")[0]}
+//                   </b>
 //                 </span>
-//                 <span className="t14">{c[2]}</span>
+//                 <span className="t14">{c.text}</span>
 //               </div>
 //             </div>
 //           ))}
-//           {myC.map((c, i) => (
-//             <div
-//               key={`m${i}`}
-//               className="row gap10"
-//               style={{ padding: "7px 0", alignItems: "flex-start" }}
-//             >
-//               <Avatar name="You" size={30} />
-//               <div className="col">
-//                 <span className="t13">
-//                   <b className="uname">You</b>{" "}
-//                   <span className="muted2">@yourhandle · now</span>
-//                 </span>
-//                 <span className="t14">{c}</span>
-//               </div>
-//             </div>
-//           ))}
-//           <div className="row gap10" style={{ marginTop: 8 }}>
-//             <Avatar name="You" size={32} />
-//             <input
-//               className="input"
-//               placeholder="Add a comment…"
-//               value={ctext}
-//               style={{ padding: "9px 13px" }}
-//               onChange={(e) => setCtext(e.target.value)}
-//               onKeyDown={(e) => {
-//                 if (e.key === "Enter") sendC();
-//               }}
-//             />
-//             <button
-//               className="btn btn-blue btn-sm"
-//               disabled={!ctext.trim()}
-//               onClick={sendC}
-//             >
-//               <Icon n="send" s={15} />
-//             </button>
-//           </div>
+//           <CommentComposer onSubmit={addComment} />
 //         </div>
 //       )}
 //     </div>
 //   );
 // }
-
-// src/components/cards/PostCard.tsx
-//
-// This is your new project's card (design system, layout, locked/PPV/gift
-// treatment) rewired to real data instead of the mock `useAppStore`. It
-// replaces BOTH the old `PostCard.tsx` and `FeedPost.tsx` — view tracking
-// is folded in here rather than living in a separate wrapper.
-//
-// What's live today: reactions, bookmark, comments, view tracking, poll
-// display, media (single or multiple files).
-// What's dormant until the backend ships the fields: locked/PPV unlock,
-// gifting, subscribe-gated content. The JSX for these already exists below
-// — they just won't render while `post.locked` / `post.price` are undefined.
-
-// src/components/cards/PostCard.tsx
-//
-// This is your new project's card (design system, layout, locked/PPV/gift
-// treatment) rewired to real data instead of the mock `useAppStore`. It
-// replaces BOTH the old `PostCard.tsx` and `FeedPost.tsx` — view tracking
-// is folded in here rather than living in a separate wrapper.
-//
-// What's live today: reactions, bookmark, comments, view tracking, poll
-// display, media (single or multiple files).
-// What's dormant until the backend ships the fields: locked/PPV unlock,
-// gifting, subscribe-gated content. The JSX for these already exists below
-// — they just won't render while `post.locked` / `post.price` are undefined.
 
 // src/components/cards/PostCard.tsx
 //
@@ -561,9 +499,13 @@ import {
   type RawContent,
   type FeedPost,
 } from "@/lib/adapters/content";
-import { useContentInteractions } from "@/hooks/useContentInteractions";
-import { MediaLightbox } from "./media-light-box";
+import {
+  useContentInteractions,
+  usePollVote,
+} from "@/hooks/useContentInteractions";
 import { CommentComposer } from "./comment-composer";
+import { MediaExtras } from "./media-extras";
+import { MediaLightbox } from "./media-light-box";
 
 const MEDIA_H = 420;
 const LOCKED_H = 320;
@@ -673,28 +615,33 @@ function MediaTile({
   );
 }
 
-/** 0..N media files. Single file = full-width block; multiple = a simple
- *  grid — but unlike the old project, every tile in that grid opens the SAME
- *  lightbox instance scoped to this post's whole media list, at the index
- *  clicked, so you can carousel through the rest from wherever you started. */
+/** 0..N media files. Photos/videos become tiles (one = full width, several =
+ *  a grid); audio and documents render as a player / link underneath, since
+ *  neither can be drawn as an image tile. Every tile opens the SAME lightbox,
+ *  scoped to this post's visual media, at the index clicked — so you can
+ *  carousel through the rest from wherever you started. */
 function PostMedia({ media }: { media: FeedPost["media"] }) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   if (!media.length) return null;
 
+  const visual = media.filter((m) => m.isVisual);
+  const extras = media.filter((m) => !m.isVisual);
+
   return (
     <>
-      {media.length === 1 ? (
+      {visual.length === 1 && (
         <MediaTile
-          file={media[0]}
+          file={visual[0]}
           height={MEDIA_H}
           onOpen={() => setLightboxIndex(0)}
         />
-      ) : (
+      )}
+      {visual.length > 1 && (
         <div
           className="grid"
           style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}
         >
-          {media.slice(0, 4).map((file, i) => (
+          {visual.slice(0, 4).map((file, i) => (
             <MediaTile
               key={i}
               file={file}
@@ -704,9 +651,14 @@ function PostMedia({ media }: { media: FeedPost["media"] }) {
           ))}
         </div>
       )}
+      {extras.length > 0 && (
+        <div style={{ marginTop: visual.length ? 10 : 0 }}>
+          <MediaExtras media={extras} />
+        </div>
+      )}
       {lightboxIndex !== null && (
         <MediaLightbox
-          items={media}
+          items={visual}
           startIndex={lightboxIndex}
           onClose={() => setLightboxIndex(null)}
         />
@@ -715,7 +667,34 @@ function PostMedia({ media }: { media: FeedPost["media"] }) {
   );
 }
 
-export function PostCard({ raw }: { raw: RawContent }) {
+/** Where a post's detail page lives. Register this route
+ *  (`<Route path="/p/:id" element={<PostDetailPage />} />`) or change it here —
+ *  it's the only place the path is written. (The mock card's "copy link" text
+ *  already used /p/:id, hence the choice.) */
+export const postPath = (id: string) => `/p/${id}`;
+
+/** Same wording as the old AnsweredPoll: "3d left" / "4h 26min left" /
+ *  "12min left" / "Poll ended". */
+function pollStatus(expiresAt: string | null, closed: boolean): string {
+  if (closed) return "Poll ended";
+  if (!expiresAt) return "";
+  const ms = Date.parse(expiresAt) - Date.now();
+  if (ms <= 0) return "Poll ended";
+  const hours = Math.floor(ms / 3_600_000);
+  const mins = Math.floor((ms % 3_600_000) / 60_000);
+  if (hours >= 24) return `${Math.floor(hours / 24)}d left`;
+  return hours > 0 ? `${hours}h ${mins}min left` : `${mins}min left`;
+}
+
+export function PostCard({
+  raw,
+  variant = "feed",
+}: {
+  raw: RawContent;
+  /** "detail" = the post's own page: the card doesn't navigate to itself, and
+   *  the comment thread below it replaces the inline comments panel. */
+  variant?: "feed" | "detail";
+}) {
   const navigate = useNavigate();
   const { userObject } = useAppSelector((s: RootState) => s.auth);
   const post = mapContentToFeedPost(raw, userObject?.email);
@@ -727,6 +706,17 @@ export function PostCard({ raw }: { raw: RawContent }) {
 
   const [showComments, setShowComments] = useState(false);
   const [reportedLocally, setReportedLocally] = useState(false);
+
+  // Polls: pick an option, then press Vote. The vote request's URL contains the
+  // chosen option's id, so the hook is handed the current selection.
+  const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
+  const { vote, isVoting } = usePollVote(
+    post.id,
+    selectedChoice ?? "",
+    userObject?.email,
+  );
+  const showPollResults = post.pollVotedIndex !== null || post.pollClosed;
+  const pollTimeLeft = pollStatus(post.pollExpiresAt, post.pollClosed);
 
   // View tracking, folded in from the old FeedPost wrapper.
   const rootRef = useRef<HTMLDivElement>(null);
@@ -783,7 +773,9 @@ export function PostCard({ raw }: { raw: RawContent }) {
       className="card"
       style={{ padding: 18 }}
       ref={rootRef}
-      onClick={() => navigate(`/dashboard/${post.id}`)}
+      onClick={
+        variant === "feed" ? () => navigate(postPath(post.id)) : undefined
+      }
     >
       <div className="row between" onClick={(e) => e.stopPropagation()}>
         <div className="row gap12">
@@ -867,45 +859,120 @@ export function PostCard({ raw }: { raw: RawContent }) {
 
         {post.poll && (
           <div className="col gap8" style={{ marginBottom: 4, marginTop: 12 }}>
-            {post.poll.map((o, i) => (
-              <div
-                key={i}
-                className="hair"
-                style={{
-                  position: "relative",
-                  padding: "11px 14px",
-                  borderRadius: 12,
-                  overflow: "hidden",
-                  borderColor:
-                    post.pollVotedIndex === i
-                      ? "var(--blue-ink)"
-                      : "var(--line)",
-                }}
-              >
+            {/* Voting view: time left sits above the options, like the old form. */}
+            {!showPollResults && pollTimeLeft && (
+              <div className="muted t12">{pollTimeLeft}</div>
+            )}
+
+            {post.poll.map((o, i) =>
+              showPollResults ? (
+                // ── Results: shown once you've voted, or the poll has ended ──
                 <div
+                  key={o.id || i}
+                  className="hair"
                   style={{
-                    position: "absolute",
-                    left: 0,
-                    top: 0,
-                    bottom: 0,
-                    width: `${o.pct}%`,
-                    background:
+                    position: "relative",
+                    padding: "11px 14px",
+                    borderRadius: 12,
+                    overflow: "hidden",
+                    borderColor:
                       post.pollVotedIndex === i
-                        ? "rgba(37,153,246,.3)"
-                        : "rgba(37,153,246,.14)",
+                        ? "var(--blue-ink)"
+                        : "var(--line)",
                   }}
-                />
-                <div className="row between" style={{ position: "relative" }}>
-                  <span className="row gap8 b6 t14">
-                    {post.pollVotedIndex === i && (
-                      <Icon n="check" s={14} c="var(--blueL-ink)" />
-                    )}
-                    {o.label}
-                  </span>
-                  <span className="muted t13">{o.pct}%</span>
+                >
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      top: 0,
+                      bottom: 0,
+                      width: `${o.pct}%`,
+                      background:
+                        post.pollVotedIndex === i
+                          ? "rgba(37,153,246,.3)"
+                          : "rgba(37,153,246,.14)",
+                    }}
+                  />
+                  <div className="row between" style={{ position: "relative" }}>
+                    <span className="row gap8 b6 t14">
+                      {post.pollVotedIndex === i && (
+                        <Icon n="check" s={14} c="var(--blueL-ink)" />
+                      )}
+                      {o.label}
+                    </span>
+                    <span className="muted t13">{o.pct}%</span>
+                  </div>
                 </div>
+              ) : (
+                // ── Voting: pick an option, then press Vote ──
+                <button
+                  type="button"
+                  key={o.id || i}
+                  className="hair row gap10"
+                  onClick={() => setSelectedChoice(o.id)}
+                  style={{
+                    padding: "11px 14px",
+                    borderRadius: 12,
+                    textAlign: "left",
+                    borderColor:
+                      selectedChoice === o.id
+                        ? "var(--blue-ink)"
+                        : "var(--line)",
+                    background:
+                      selectedChoice === o.id
+                        ? "rgba(37,153,246,.1)"
+                        : undefined,
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 16,
+                      height: 16,
+                      flex: "none",
+                      borderRadius: "50%",
+                      border: `2px solid ${selectedChoice === o.id ? "var(--blue-ink)" : "var(--line2)"}`,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    {selectedChoice === o.id && (
+                      <span
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: "50%",
+                          background: "var(--blue-ink)",
+                        }}
+                      />
+                    )}
+                  </span>
+                  <span className="b6 t14">{o.label}</span>
+                </button>
+              ),
+            )}
+
+            {!showPollResults && (
+              <button
+                type="button"
+                className="btn btn-blue btn-sm"
+                style={{ alignSelf: "flex-start" }}
+                disabled={!selectedChoice || isVoting}
+                onClick={vote}
+              >
+                {isVoting ? "Voting…" : "Vote"}
+              </button>
+            )}
+
+            {showPollResults && (
+              <div className="muted t12">
+                {post.pollTotalVotes.toLocaleString()}{" "}
+                {post.pollTotalVotes === 1 ? "vote" : "votes"}
+                {pollTimeLeft && ` · ${pollTimeLeft}`}
+                {post.pollVotedIndex !== null && " · you voted"}
               </div>
-            ))}
+            )}
           </div>
         )}
       </div>
@@ -934,8 +1001,17 @@ export function PostCard({ raw }: { raw: RawContent }) {
           </button>
           <button
             className="row gap6 muted"
-            onClick={() => setShowComments((v) => !v)}
-            style={{ color: showComments ? "var(--blueL-ink)" : "" }}
+            onClick={() =>
+              variant === "detail"
+                ? document
+                    .getElementById("post-comments")
+                    ?.scrollIntoView({ behavior: "smooth" })
+                : setShowComments((v) => !v)
+            }
+            style={{
+              color:
+                variant === "feed" && showComments ? "var(--blueL-ink)" : "",
+            }}
           >
             <Icon n="comment" s={19} />
             {post.counts.comments}
@@ -949,7 +1025,7 @@ export function PostCard({ raw }: { raw: RawContent }) {
         )}
       </div>
 
-      {showComments && (
+      {variant === "feed" && showComments && (
         <div
           style={{
             marginTop: 14,
@@ -964,12 +1040,10 @@ export function PostCard({ raw }: { raw: RawContent }) {
               className="row gap10"
               style={{ padding: "7px 0", alignItems: "flex-start" }}
             >
-              <Avatar name={c.mine ? "You" : c.authorEmail} size={30} />
+              <Avatar name={c.who} src={c.avatar} size={30} />
               <div className="col">
                 <span className="t13">
-                  <b className="uname">
-                    {c.mine ? "You" : c.authorEmail.split("@")[0]}
-                  </b>
+                  <b className="uname">{c.mine ? "You" : c.who}</b>
                 </span>
                 <span className="t14">{c.text}</span>
               </div>

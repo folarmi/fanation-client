@@ -8,12 +8,50 @@
 //   SIZES,
 //   // Verified,
 //   coverFor,
-//   gridFor,
 // } from "@/lib/ui";
 // import { FollowBtn, PostCard } from "@/components/post-card";
 // import { useGetData, useInfiniteGetData } from "@/hooks/api/use-api";
 // import { CreatorUser } from "@/utils/types";
+// import { MediaTab } from "@/components/MediaTab";
 
+// /* Streams tab — disabled for now, kept here rather than deleted so it can be
+//    dropped back in later. Re-enabling it needs these extra imports too:
+//    `import { LIVE_TITLES, fhash } from "@/lib/core"; import type { Creator } from "@/lib/core";
+//    import { mediaFor, poolFor } from "@/lib/ui";`
+
+// const PAST_TITLES = [
+//   "Chatting with the community",
+//   "Q&A + behind the scenes",
+//   "Getting ready with me",
+//   "Weekend hangout",
+//   "Answering your questions",
+//   "Late night session",
+// ];
+
+// // A creator's broadcast history — deterministic from their id, the same way
+// // every other seed list in this app (LIVE_TITLES, gridFor…) is, so the same
+// // creator always shows the same past streams rather than reshuffling on
+// // every render.
+// function pastStreamsFor(c: Creator, n = 6) {
+//   return Array.from({ length: n }, (_, i) => {
+//     const h = fhash(`${c.id}-vod-${i}`);
+//     return {
+//       id: `${c.id}-vod-${i}`,
+//       title: PAST_TITLES[h % PAST_TITLES.length],
+//       mins: 25 + (h % 95),
+//       views: 800 + (h % 12000),
+//       daysAgo: 1 + i * 2 + (h % 3),
+//       thumb: mediaFor(poolFor(c.handle), i + 3),
+//     };
+//   });
+// }
+// */
+
+// /**
+//  * `/creator/:handle`. The handle comes off the URL, so it is `string | undefined`
+//  * until the router has matched — `byHandle` falls back to the first seeded creator
+//  * rather than throwing, which keeps a hand-typed or stale link on a real page.
+//  */
 // export default function CreatorProfilePage() {
 //   const { handle = "" } = useParams<{ handle: string }>();
 //   const S = useAppStore();
@@ -192,57 +230,13 @@
 //         <div className="split" style={{ marginTop: 20 }}>
 //           <div className="grow col gap16" style={{ maxWidth: 620 }}>
 //             {tab === "Media" ? (
-//               <div className="grid g3 gap10">
-//                 {Array.from({ length: 18 }).map((_, i) => (
-//                   <div
-//                     key={i}
-//                     className="card"
-//                     style={{
-//                       padding: 0,
-//                       overflow: "hidden",
-//                       aspectRatio: "1",
-//                       position: "relative",
-//                       cursor: "pointer",
-//                     }}
-//                     onClick={() => {
-//                       if (i % 4 === 0)
-//                         S.openModal("ppv", {
-//                           id: `pm${i}`,
-//                           price: 150,
-//                           who: c.name,
-//                         });
-//                     }}
-//                   >
-//                     <Photo
-//                       sizes={SIZES.profileGrid}
-//                       src={gridFor(c.handle, i)}
-//                       seed={`prof${i}`}
-//                     />
-//                     {i % 4 === 0 && (
-//                       <div
-//                         className="chip-coin onart"
-//                         style={{
-//                           position: "absolute",
-//                           top: 8,
-//                           left: 8,
-//                           padding: "2px 7px",
-//                         }}
-//                       >
-//                         <Icon n="lock" s={11} />
-//                         PPV
-//                       </div>
-//                     )}
-//                     {i % 5 === 2 && (
-//                       <div
-//                         className="pill t12 onart"
-//                         style={{ position: "absolute", bottom: 8, right: 8 }}
-//                       >
-//                         <Icon n="play" s={11} />
-//                       </div>
-//                     )}
-//                   </div>
-//                 ))}
-//               </div>
+//               <MediaTab
+//                 posts={creatorContent}
+//                 isLoading={creatorContentIsLoading}
+//                 hasNextPage={hasNextPage}
+//                 isFetchingNextPage={isFetchingNextPage}
+//                 fetchNextPage={fetchNextPage}
+//               />
 //             ) : (
 //               <>
 //                 {creatorContentIsLoading && (
@@ -354,7 +348,7 @@
 
 import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { byHandle, useAppStore } from "@/lib/core";
+import { SEED_FEED, byHandle, useAppStore } from "@/lib/core";
 import {
   Avatar,
   Icon,
@@ -366,46 +360,7 @@ import {
 import { FollowBtn, PostCard } from "@/components/post-card";
 import { useGetData, useInfiniteGetData } from "@/hooks/api/use-api";
 import { CreatorUser } from "@/utils/types";
-import { MediaTab } from "@/components/MediaTab";
 
-/* Streams tab — disabled for now, kept here rather than deleted so it can be
-   dropped back in later. Re-enabling it needs these extra imports too:
-   `import { LIVE_TITLES, fhash } from "@/lib/core"; import type { Creator } from "@/lib/core";
-   import { mediaFor, poolFor } from "@/lib/ui";`
-
-const PAST_TITLES = [
-  "Chatting with the community",
-  "Q&A + behind the scenes",
-  "Getting ready with me",
-  "Weekend hangout",
-  "Answering your questions",
-  "Late night session",
-];
-
-// A creator's broadcast history — deterministic from their id, the same way
-// every other seed list in this app (LIVE_TITLES, gridFor…) is, so the same
-// creator always shows the same past streams rather than reshuffling on
-// every render.
-function pastStreamsFor(c: Creator, n = 6) {
-  return Array.from({ length: n }, (_, i) => {
-    const h = fhash(`${c.id}-vod-${i}`);
-    return {
-      id: `${c.id}-vod-${i}`,
-      title: PAST_TITLES[h % PAST_TITLES.length],
-      mins: 25 + (h % 95),
-      views: 800 + (h % 12000),
-      daysAgo: 1 + i * 2 + (h % 3),
-      thumb: mediaFor(poolFor(c.handle), i + 3),
-    };
-  });
-}
-*/
-
-/**
- * `/creator/:handle`. The handle comes off the URL, so it is `string | undefined`
- * until the router has matched — `byHandle` falls back to the first seeded creator
- * rather than throwing, which keeps a hand-typed or stale link on a real page.
- */
 export default function CreatorProfilePage() {
   const { handle = "" } = useParams<{ handle: string }>();
   const S = useAppStore();
@@ -413,7 +368,7 @@ export default function CreatorProfilePage() {
   const c = byHandle(handle);
   const [tab, setTab] = useState("Posts");
   const isSub = !!S.subs[c.handle];
-  // const posts = SEED_FEED.filter((p) => p.h === c.handle).slice(0, 6);
+  const posts = SEED_FEED.filter((p) => p.h === c.handle).slice(0, 6);
 
   const { data: profileData } = useGetData({
     url: `profile/${handle}`,
