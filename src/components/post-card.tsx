@@ -487,13 +487,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { CREATORS, byHandle, useAppStore } from "@/lib/core";
+import type { Post } from "@/lib/core";
 import { Avatar, Icon, Loop, Menu, Photo, SIZES, Verified } from "@/lib/ui";
-import { useCustomMutation, useGetData } from "@/hooks/api/use-api";
+import { useCustomMutation } from "@/hooks/api/use-api";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAppSelector } from "@/services/hook";
 import type { RootState } from "@/services/store";
-import { formatTimeAgo, isActivelySubscribed } from "@/utils/helper";
-import type { CreatorUser } from "@/utils/types";
+import { formatTimeAgo } from "@/utils/helper"; // port this one util over from the old project
 import {
   mapContentToFeedPost,
   type RawContent,
@@ -501,30 +502,28 @@ import {
 } from "@/lib/adapters/content";
 import {
   useContentInteractions,
+  useDeletePost,
   usePollVote,
 } from "@/hooks/useContentInteractions";
-import { CommentComposer } from "./comment-composer";
+import { useSubscriptionStatus } from "@/hooks/useSubscriptionStatus";
 import { MediaExtras } from "./media-extras";
 import { MediaLightbox } from "./media-light-box";
+import { MentionText } from "./MentionText";
+import { CommentComposer } from "./comment-composer";
+import { ConfirmDialog } from "./confirm-dialog";
+import { EditPostDialog } from "./edit-post-dialog";
 
 const MEDIA_H = 420;
 const LOCKED_H = 320;
 
 export function FollowBtn({ username }: { username: string }) {
   const queryClient = useQueryClient();
-  const { userObject } = useAppSelector((s: RootState) => s.auth);
-
-  const { data, isLoading: subsLoading } = useGetData({
-    url: `subscriptions?page=0&size=20&subscriberEmail=${userObject?.email}`,
-    queryKey: ["GetSubscriptionsForViewer"],
-  });
-
-  const currentSub = isActivelySubscribed(
-    (data as { data?: { content?: CreatorUser[] } } | undefined)?.data
-      ?.content ?? [],
-    username,
-  );
-  const isSubscribed = currentSub ? currentSub.isActive : false;
+  // Shared with the "Subscribed" tag on posts so the two can never disagree.
+  const {
+    currentSub,
+    isSubscribed,
+    isLoading: subsLoading,
+  } = useSubscriptionStatus(username);
 
   const invalidate = () =>
     queryClient.invalidateQueries({
@@ -667,11 +666,51 @@ function PostMedia({ media }: { media: FeedPost["media"] }) {
   );
 }
 
-/** Where a post's detail page lives. Register this route
- *  (`<Route path="/p/:id" element={<PostDetailPage />} />`) or change it here —
- *  it's the only place the path is written. (The mock card's "copy link" text
- *  already used /p/:id, hence the choice.) */
-export const postPath = (id: string) => `/p/${id}`;
+/** The mock modals (gift, subscribe) expect a mock `Creator`. `byHandle()`
+ *  falls back to CREATORS[0] for any creator it doesn't know — which is every
+ *  real creator — so passing it straight through would send a gift to the WRONG
+ *  person. Start from whatever it returns (so the modal still gets every field
+ *  it expects) and overwrite the identity with the post's real author. */
+function creatorForModal(post: FeedPost) {
+  const base = byHandle(post.handle);
+  const known = base.handle === post.handle;
+  return {
+    ...base,
+    id: known ? base.id : post.handle,
+    handle: post.handle,
+    name: post.who,
+  };
+}
+
+/** The report / PPV modals were written against the mock `Post` shape. */
+function legacyPost(post: FeedPost, mine: boolean): Post {
+  return {
+    id: post.id,
+    h: post.handle,
+    who: post.who,
+    v: post.verified,
+    t: formatTimeAgo(post.createdAt),
+    text: post.text ?? "",
+    type: post.locked
+      ? "locked"
+      : post.media.length
+        ? post.media[0].isVideo
+          ? "video"
+          : "image"
+        : "text",
+    mine,
+    likes: post.counts.reactions,
+    comments: post.counts.comments,
+    price: post.price ?? 0,
+    seed: post.id,
+  } as unknown as Post;
+}
+
+/** Where a post's detail page lives: `feed/:id`
+ *  (`<Route path="feed/:id" element={<PostDetailPage />} />`). It's the only
+ *  place the path is written — the card click, "Copy link" and the back
+ *  button all read it from here. */
+export const postPath = (id: string) => `/feed/${id}`;
 
 /** Same wording as the old AnsweredPoll: "3d left" / "4h 26min left" /
  *  "12min left" / "Poll ended". */
@@ -689,23 +728,43 @@ function pollStatus(expiresAt: string | null, closed: boolean): string {
 export function PostCard({
   raw,
   variant = "feed",
+  isAlreadyBookmarked,
 }: {
   raw: RawContent;
+  /** The Bookmarks page knows every post it lists is bookmarked, but the post
+   *  arrives nested inside a save record without a reliable `bookmarkers` list
+   *  — so it says so explicitly (the old FeedPost took the same prop). */
+  isAlreadyBookmarked?: boolean;
   /** "detail" = the post's own page: the card doesn't navigate to itself, and
    *  the comment thread below it replaces the inline comments panel. */
   variant?: "feed" | "detail";
 }) {
   const navigate = useNavigate();
+  const S = useAppStore();
   const { userObject } = useAppSelector((s: RootState) => s.auth);
   const post = mapContentToFeedPost(raw, userObject?.email);
   const { react, removeReaction, toggleBookmark, addComment, recordView } =
     useContentInteractions(post.id, userObject?.email);
 
   const mine = post.authorEmail === userObject?.email;
-  const isSub = false; // TODO: wire once subscription-per-post data exists; see FollowBtn for the query shape
+  // "Subscribed" comes from the real subscriptions API (shared with FollowBtn);
+  // PPV unlock is still the local store's.
+  const { isSubscribed: isSub } = useSubscriptionStatus(post.handle);
+  const isBookmarked = isAlreadyBookmarked ?? post.isBookmarked;
+  const isUnlocked = !!S.unlocked[post.id];
+  // A creator is live if the backend says so (not sent yet) or the mock
+  // directory does. NOT byHandle(): its CREATORS[0] fallback would make every
+  // real post look live.
+  const isLive =
+    post.live || CREATORS.some((c) => c.handle === post.handle && c.live);
 
   const [showComments, setShowComments] = useState(false);
-  const [reportedLocally, setReportedLocally] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const { deletePost, isDeleting } = useDeletePost(post.id, () => {
+    setConfirmDelete(false);
+    if (variant === "detail") navigate("/feed"); // the page we're on no longer exists
+  });
 
   // Polls: pick an option, then press Vote. The vote request's URL contains the
   // chosen option's id, so the hook is handed the current selection.
@@ -736,35 +795,59 @@ export function PostCard({
     return () => observer.disconnect();
   }, []);
 
+  const copyLink = async () => {
+    const url = `${window.location.origin}${postPath(post.id)}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      S.toast(`Link copied — ${url.replace(/^https?:\/\//, "")}`, "ok");
+    } catch {
+      S.toast("Failed to copy link", "err");
+    }
+  };
+
+  // Bookmark, edit, delete and copy-link are real (API / clipboard); the rest are
+  // the store's own local actions — none has a backend endpoint yet.
   const menu = mine
     ? [
+        { ic: "repost", t: "Copy link", fn: copyLink },
+        // Same order as the old TimeLineHomeModal: copy link, edit, delete.
+        // (`edit` is a guess at your icon name — swap it if it's called something else.)
+        { ic: "edit", t: "Edit post", fn: () => setEditing(true) },
+        "-" as const,
         {
           ic: "x",
           t: "Delete post",
           danger: true,
-          fn: () => {
-            /* TODO: delete mutation */
-          },
+          fn: () => setConfirmDelete(true),
         },
       ]
     : [
         {
           ic: "bookmark",
-          t: post.isBookmarked
-            ? "Remove from collection"
-            : "Save to collection",
-          fn: toggleBookmark,
+          t: isBookmarked ? "Remove from collection" : "Save to collection",
+          fn: () => toggleBookmark(isBookmarked),
         },
+        { ic: "repost", t: "Copy link", fn: copyLink },
         "-" as const,
-        // Mute/block/report have no backend endpoint in the sample payload yet.
-        // Left in place — wire each to a real mutation as the API grows.
-        reportedLocally
+        { ic: "eye", t: "Not interested", fn: () => S.hide(post.id) },
+        {
+          ic: "bell",
+          t: `Mute @${post.handle}`,
+          fn: () => S.mute(post.handle),
+        },
+        {
+          ic: "shield",
+          t: `Block @${post.handle}`,
+          danger: true,
+          fn: () => S.block(post.handle),
+        },
+        S.reported[post.id]
           ? { ic: "flag", t: "Reported ✓", off: true }
           : {
               ic: "flag",
               t: "Report post",
               danger: true,
-              fn: () => setReportedLocally(true),
+              fn: () => S.openModal("report", legacyPost(post, mine)),
             },
       ];
 
@@ -781,8 +864,12 @@ export function PostCard({
         <div className="row gap12">
           <Avatar
             name={post.who}
+            src={post.avatar}
             size={44}
-            ring={post.live ? "var(--coral)" : undefined}
+            ring={isLive ? "var(--coral)" : undefined}
+            onClick={
+              isLive ? () => navigate(`/live/${post.handle}`) : undefined
+            }
           />
           <div className="col">
             <div className="row gap6">
@@ -819,13 +906,13 @@ export function PostCard({
           style={{ margin: "13px 0", lineHeight: 1.55 }}
           onClick={(e) => e.stopPropagation()}
         >
-          {post.text}
+          <MentionText text={post.text} />
         </div>
       )}
 
       <div onClick={(e) => e.stopPropagation()}>
         {/* Locked / PPV — dormant until `visibility`/`price` exist on the payload. */}
-        {post.locked ? (
+        {post.locked && !isUnlocked ? (
           <div className="locked" style={{ height: LOCKED_H }}>
             <Photo
               sizes={SIZES.feedCard}
@@ -845,16 +932,37 @@ export function PostCard({
               </div>
               <div className="row gap8">
                 {!isSub && (
-                  <button className="btn btn-ghost btn-sm">Subscribe</button>
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    onClick={() =>
+                      S.openModal("subscribe", creatorForModal(post))
+                    }
+                  >
+                    Subscribe
+                  </button>
                 )}
-                <button className="btn btn-blue btn-sm">
+                <button
+                  className="btn btn-blue btn-sm"
+                  onClick={() => S.openModal("ppv", legacyPost(post, mine))}
+                >
                   Unlock · {post.price} coins
                 </button>
               </div>
             </div>
           </div>
         ) : (
-          <PostMedia media={post.media} />
+          <div style={{ position: "relative" }}>
+            <PostMedia media={post.media} />
+            {post.locked && isUnlocked && (
+              <span
+                className="chip-mint onart"
+                style={{ position: "absolute", top: 10, left: 10, zIndex: 1 }}
+              >
+                <Icon n="check" s={12} />
+                Unlocked
+              </span>
+            )}
+          </div>
         )}
 
         {post.poll && (
@@ -1018,7 +1126,10 @@ export function PostCard({
           </button>
         </div>
         {!mine && (
-          <button className="btn btn-ghost btn-sm">
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={() => S.openModal("gift", creatorForModal(post))}
+          >
             <Icon n="gift" s={15} />
             Gift
           </button>
@@ -1045,12 +1156,28 @@ export function PostCard({
                 <span className="t13">
                   <b className="uname">{c.mine ? "You" : c.who}</b>
                 </span>
-                <span className="t14">{c.text}</span>
+                <span className="t14">
+                  <MentionText text={c.text} />
+                </span>
               </div>
             </div>
           ))}
           <CommentComposer onSubmit={addComment} />
         </div>
+      )}
+
+      {editing && (
+        <EditPostDialog raw={raw} onClose={() => setEditing(false)} />
+      )}
+
+      {confirmDelete && (
+        <ConfirmDialog
+          title="Delete post"
+          message="Are you sure you want to delete this post?"
+          isPending={isDeleting}
+          onConfirm={deletePost}
+          onCancel={() => setConfirmDelete(false)}
+        />
       )}
     </div>
   );

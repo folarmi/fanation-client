@@ -196,28 +196,14 @@
 //   comment on a post  POST   contents/{postId}/comments            (CommentThread)
 //   reply to a comment POST   contents/comments/{commentId}/replies (CommentItem)
 //   delete a comment   DELETE contents/comments/{commentId}/remove  (DeleteButton)
-//   poll vote          PATCH  contents/{postId}/poll-vote/{choiceId} (AnsweredPoll)
-
-// src/hooks/useContentInteractions.ts
-//
-// All the write-side API calls, in one place. Components call `react("LIKE")`,
-// `toggleBookmark()`, `addComment(...)`, `usePollVote(...)` — they never touch
-// useCustomMutation or the query cache directly.
-//
-// Every endpoint below is taken from the old project's own code:
-//   like / unlike      POST   contents/reactions  { pubId, reactionType }
-//                      DELETE contents/{id}/reactions
-//                      (the old Postcard used these for posts AND comments)
-//   bookmark           POST   contents/saves      { contentPublicId, saveType }
-//   view               POST   contents/{id}/view
-//   comment on a post  POST   contents/{postId}/comments            (CommentThread)
-//   reply to a comment POST   contents/comments/{commentId}/replies (CommentItem)
-//   delete a comment   DELETE contents/comments/{commentId}/remove  (DeleteButton)
+//   delete a post      DELETE contents/{postId}                      (TimeLineHomeModal)
+//   edit a post        PUT    contents/{postId}                      (EditPost)
 //   poll vote          PATCH  contents/{postId}/poll-vote/{choiceId} (AnsweredPoll)
 
 import { useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCustomMutation } from "@/hooks/api/use-api";
+import { useNotify } from "@/hooks/useNotify";
 import type { RawContent } from "@/lib/adapters/content";
 import type {
   MediaItem,
@@ -225,7 +211,6 @@ import type {
   ReactionType,
   BookMark,
 } from "@/utils/types";
-import { useNotify } from "./useNotify";
 
 /** Paginated list caches shaped { pages: [{ data: { content: [] } }] }.
  *  Add a key here when a new screen lists posts, and likes/bookmarks/votes
@@ -234,6 +219,11 @@ const LIST_KEYS = [["GetContents"], ["GetUserContent"]] as const;
 
 /** Single-post cache shaped { data: <post with nested comments/replies> }. */
 const DETAIL_KEY = ["GetContentsById"] as const;
+
+/** The Bookmarks page's cache. Different shape from the lists above: each
+ *  entry is a SAVE RECORD whose `.content` is the post —
+ *  { pages: [{ data: { content: [{ ..., content: <post> }] } }] } */
+const BOOKMARK_KEY = ["GetUserBookmarks"] as const;
 
 /** Applies `updater` to whichever node in a post/comment/reply tree has the
  *  matching publicId, leaving the rest of the tree untouched. */
@@ -297,9 +287,36 @@ function useContentCacheUpdater() {
 export function useInvalidateContent() {
   const queryClient = useQueryClient();
   return () => {
-    [...LIST_KEYS, DETAIL_KEY].forEach((key) =>
+    [...LIST_KEYS, DETAIL_KEY, BOOKMARK_KEY].forEach((key) =>
       queryClient.invalidateQueries({ queryKey: [...key], exact: false }),
     );
+  };
+}
+
+/** Drops a post from the Bookmarks page the instant it's un-bookmarked. */
+function useBookmarkRemover() {
+  const queryClient = useQueryClient();
+  return (publicId: string) => {
+    queryClient
+      .getQueriesData<any>({ queryKey: [...BOOKMARK_KEY] })
+      .forEach(([queryKey]) => {
+        queryClient.setQueryData(queryKey, (oldData: any) => {
+          if (!oldData?.pages) return oldData;
+          return {
+            ...oldData,
+            pages: oldData.pages.map((page: any) => ({
+              ...page,
+              data: {
+                ...page.data,
+                content: page.data?.content?.filter(
+                  (item: any) =>
+                    (item?.content?.publicId ?? item?.publicId) !== publicId,
+                ),
+              },
+            })),
+          };
+        });
+      });
   };
 }
 
@@ -315,6 +332,7 @@ export function useContentInteractions(
 ) {
   const updateCache = useContentCacheUpdater();
   const invalidate = useInvalidateContent();
+  const removeFromBookmarks = useBookmarkRemover();
   const notify = useNotify();
 
   // On failure, refetch too — otherwise the optimistic heart/bookmark stays
@@ -333,7 +351,10 @@ export function useContentInteractions(
   const saveMutation = useCustomMutation({
     endpoint: `contents/saves`,
     onSuccessCallback: invalidate,
-    onError: invalidate,
+    onError: () => {
+      invalidate(); // roll back the optimistic change
+      notify.error("Something went wrong, please try again");
+    },
   });
   const replyMutation = useCustomMutation({
     endpoint:
@@ -386,10 +407,17 @@ export function useContentInteractions(
     deleteReactionMutation.mutate({});
   }
 
-  function toggleBookmark() {
+  /**
+   * @param currentlyBookmarked  what the UI is showing right now. It has to be
+   * passed in: on the Bookmarks page the post arrives nested inside a save
+   * record and doesn't carry a reliable `bookmarkers` list, so it can't be
+   * worked out from the cache. The endpoint itself is a toggle either way.
+   */
+  function toggleBookmark(currentlyBookmarked: boolean) {
+    const removing = currentlyBookmarked;
+
     updateCache(publicId, (post) => {
-      const already = post.bookmarkers?.some((b) => b.email === viewerEmail);
-      if (already) {
+      if (removing) {
         return {
           ...post,
           bookmarkers: post.bookmarkers?.filter((b) => b.email !== viewerEmail),
@@ -409,7 +437,16 @@ export function useContentInteractions(
         bookmarkers: [...(post.bookmarkers ?? []), optimistic],
       };
     });
-    saveMutation.mutate({ contentPublicId: publicId, saveType: "BOOKMARK" });
+    if (removing) removeFromBookmarks(publicId);
+
+    saveMutation.mutate(
+      { contentPublicId: publicId, saveType: "BOOKMARK" },
+      // Same wording the old card used.
+      {
+        onSuccess: () =>
+          notify.success(removing ? "Bookmark removed" : "Post bookmarked"),
+      },
+    );
   }
 
   /** On a post: adds a comment. On a comment: adds a reply. */
@@ -513,5 +550,67 @@ export function useDeleteComment(commentId: string, onError?: () => void) {
   return {
     deleteComment: () => deleteMutation.mutate({}),
     isDeleting: deleteMutation.isPending,
+  };
+}
+
+/**
+ * Deleting your own post — ported from the old TimeLineHomeModal.
+ *   DELETE contents/{postId}
+ * `onDeleted` runs after the server confirms (e.g. leave the post's own page).
+ */
+export function useDeletePost(publicId: string, onDeleted?: () => void) {
+  const invalidate = useInvalidateContent();
+  const notify = useNotify();
+
+  const deleteMutation = useCustomMutation({
+    endpoint: `contents/${publicId}`,
+    method: "delete",
+    successMessage: () => "Post deleted successfully",
+    onSuccessCallback: () => {
+      invalidate();
+      onDeleted?.();
+    },
+    onError: (err: any) =>
+      notify.error(err?.response?.data?.message || "Could not delete post"),
+  });
+
+  return {
+    deletePost: () => deleteMutation.mutate({}),
+    isDeleting: deleteMutation.isPending,
+  };
+}
+
+/**
+ * Saving an edited post — ported from the old EditPost.
+ *   PUT contents/{postId}   body: { message, mentions, mediaFiles }
+ * `mediaFiles` is the FULL list the post should end up with (the media being
+ * kept plus anything just uploaded) — the request replaces, it doesn't append.
+ * Refreshes every list, the detail page and Bookmarks (the old one only
+ * refreshed the feed, so an edit didn't show on a profile or detail page).
+ */
+export function useEditPost(publicId: string, onSaved?: () => void) {
+  const invalidate = useInvalidateContent();
+  const notify = useNotify();
+
+  const editMutation = useCustomMutation({
+    endpoint: `contents/${publicId}`,
+    method: "put",
+    successMessage: () => "Post edited successfully",
+    onSuccessCallback: () => {
+      invalidate();
+      onSaved?.();
+    },
+    // The old one swallowed errors silently.
+    onError: (err: any) =>
+      notify.error(err?.response?.data?.message || "Could not save changes"),
+  });
+
+  return {
+    savePost: (payload: {
+      message: string;
+      mentions: string[];
+      mediaFiles: MediaItem[];
+    }) => editMutation.mutate(payload),
+    isSaving: editMutation.isPending,
   };
 }

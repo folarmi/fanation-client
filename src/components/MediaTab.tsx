@@ -312,9 +312,8 @@ import { Icon } from "@/lib/ui";
 import type { RawContent } from "@/lib/adapters/content";
 import { mapMedia, type FeedMedia } from "@/lib/adapters/content";
 import { PostCard } from "@/components/post-card";
-
-import type { MediaFile } from "@/utils/types";
 import { formatTimeAgo } from "@/utils/helper";
+import type { MediaFile } from "@/utils/types";
 import { MediaLightbox } from "./media-light-box";
 
 type MediaTabName = "All" | "Photos" | "Videos" | "Audio";

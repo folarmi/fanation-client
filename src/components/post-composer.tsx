@@ -31,17 +31,17 @@ import { useRef, useState } from "react";
 import { Avatar } from "@/lib/ui";
 import { useCustomMutation } from "@/hooks/api/use-api";
 import { useUploadFiles } from "@/hooks/useUploadFiles"; // port from the old project if it isn't in the new one yet
+import { getMediaType } from "@/utils/helper";
 import { useAppSelector } from "@/services/hook";
 import type { RootState } from "@/services/store";
 import { useNotify } from "@/hooks/useNotify";
 import { useFileQueue } from "@/hooks/useFileQueue";
 import { useInvalidateContent } from "@/hooks/useContentInteractions";
 import { useMentionUsers, useMentions } from "@/hooks/useMentions";
-
-import { VoiceRecorderModal } from "./VoiceRecorderModal";
-import { PollComposer } from "./poll-composer";
 import { MentionDropdown } from "./mention-dropdown";
+import { MediaAttachments } from "./media-attachements";
 import { PostToolbar } from "./post-toolbar";
+import { VoiceRecorderModal } from "./VoiceRecorderModal";
 import {
   combineDateAndTimeToISO,
   formatScheduleDate,
@@ -49,9 +49,8 @@ import {
   isFuture,
   userTimeZone,
 } from "@/utils/schedule";
-import { MediaAttachments } from "./media-attachements";
+import { PollComposer } from "./poll-composer";
 import { SchedulePicker } from "./schedule-picker";
-import { getMediaType } from "@/utils/helper";
 
 export function PostComposer({
   onClose,

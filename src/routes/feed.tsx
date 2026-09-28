@@ -1014,6 +1014,9 @@ export default function FeedPage() {
   const S = useAppStore();
   const navigate = useNavigate();
   const { userObject } = useAppSelector((state: RootState) => state.auth);
+  // Only creators can post — the same check your old Home used. Everyone else
+  // sees the feed without the composer.
+  const isCreator = userObject?.role === "CREATOR";
 
   const [story, setStory] = useState<number | null>(null);
   // null = the compact card; otherwise the full composer is open — as a normal
@@ -1185,61 +1188,62 @@ export default function FeedPage() {
           {story != null && (
             <StoryViewer key={story} idx={story} close={() => setStory(null)} />
           )}
-          {composer ? (
-            <PostComposer
-              initialMode={composer === "poll" ? "poll" : "post"}
-              initialScheduling={composer === "schedule"}
-              onClose={() => setComposer(null)}
-            />
-          ) : (
-            <div className="card" style={{ padding: 16 }}>
-              <div className="row gap12">
-                <Avatar name="You" size={40} />
-                <input
-                  className="input"
-                  placeholder="Share something with your fans…"
-                  readOnly
-                  style={{ cursor: "pointer" }}
-                  onClick={() => setComposer("post")}
-                />
-              </div>
-              <div className="row between" style={{ marginTop: 12 }}>
-                <div className="row gap16 muted">
-                  {["camera", "play", "gift", "cal"].map((i) => (
-                    <span
-                      key={i}
-                      style={{ cursor: "pointer" }}
-                      // camera/play open the composer; cal opens it with scheduling
-                      // on. gift (paid posts) isn't built yet, so it keeps opening
-                      // the existing compose modal exactly as before.
-                      onClick={() =>
-                        i === "gift"
-                          ? S.openModal("compose")
-                          : setComposer(i === "cal" ? "schedule" : "post")
-                      }
-                    >
-                      <Icon n={i} s={19} solid />
-                    </span>
-                  ))}
-                  <span
+          {isCreator &&
+            (composer ? (
+              <PostComposer
+                initialMode={composer === "poll" ? "poll" : "post"}
+                initialScheduling={composer === "schedule"}
+                onClose={() => setComposer(null)}
+              />
+            ) : (
+              <div className="card" style={{ padding: 16 }}>
+                <div className="row gap12">
+                  <Avatar name="You" size={40} />
+                  <input
+                    className="input"
+                    placeholder="Share something with your fans…"
+                    readOnly
                     style={{ cursor: "pointer" }}
-                    onClick={() => setComposer("poll")}
-                  >
-                    <Icon n="poll" s={19} solid />
-                  </span>
+                    onClick={() => setComposer("post")}
+                  />
                 </div>
-                <div className="row gap10">
-                  <button
-                    className="btn btn-ghost btn-sm"
-                    onClick={() => navigate("/studio/live")}
-                  >
-                    <Icon n="live" s={15} c="var(--coral-ink)" solid />
-                    Go Live
-                  </button>
+                <div className="row between" style={{ marginTop: 12 }}>
+                  <div className="row gap16 muted">
+                    {["camera", "play", "gift", "cal"].map((i) => (
+                      <span
+                        key={i}
+                        style={{ cursor: "pointer" }}
+                        // camera/play open the composer; cal opens it with scheduling
+                        // on. gift (paid posts) isn't built yet, so it keeps opening
+                        // the existing compose modal exactly as before.
+                        onClick={() =>
+                          i === "gift"
+                            ? S.openModal("compose")
+                            : setComposer(i === "cal" ? "schedule" : "post")
+                        }
+                      >
+                        <Icon n={i} s={19} solid />
+                      </span>
+                    ))}
+                    <span
+                      style={{ cursor: "pointer" }}
+                      onClick={() => setComposer("poll")}
+                    >
+                      <Icon n="poll" s={19} solid />
+                    </span>
+                  </div>
+                  <div className="row gap10">
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => navigate("/studio/live")}
+                    >
+                      <Icon n="live" s={15} c="var(--coral-ink)" solid />
+                      Go Live
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            ))}
 
           {feedLoading && (
             <div className="card row center" style={{ padding: 48 }}>

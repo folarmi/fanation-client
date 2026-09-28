@@ -22,12 +22,12 @@ import {
   useContentInteractions,
   useDeleteComment,
 } from "@/hooks/useContentInteractions";
-import type { FeedComment, FeedMedia } from "@/lib/adapters/content";
-import { MediaExtras } from "./media-extras";
-import { MediaLightbox } from "./media-light-box";
 import { formatTimeAgo } from "@/utils/helper";
+import type { FeedComment, FeedMedia } from "@/lib/adapters/content";
 import { CommentComposer } from "./comment-composer";
 import { MentionText } from "./MentionText";
+import { MediaExtras } from "./media-extras";
+import { MediaLightbox } from "./media-light-box";
 
 const MAX_DEPTH = 6;
 

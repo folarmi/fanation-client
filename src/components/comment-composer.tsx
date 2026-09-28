@@ -224,17 +224,16 @@
 import { useRef, useState } from "react";
 import { Avatar, Icon } from "@/lib/ui";
 import { useUploadFiles } from "@/hooks/useUploadFiles"; // port this over if it isn't already in the new project
+import { getMediaType } from "@/utils/helper"; // same — port if missing
 import { useAppSelector } from "@/services/hook";
 import type { RootState } from "@/services/store";
 import type { MediaItem } from "@/utils/types";
-
-import { useMentionUsers, useMentions } from "@/hooks/useMentions";
-import { getMediaType } from "@/utils/helper";
-import { MentionDropdown } from "./mention-dropdown";
-import { PostToolbar } from "./post-toolbar";
-import { MediaAttachments } from "./media-attachements";
 import { useNotify } from "@/hooks/useNotify";
 import { useFileQueue } from "@/hooks/useFileQueue";
+import { useMentionUsers, useMentions } from "@/hooks/useMentions";
+import { MentionDropdown } from "./mention-dropdown";
+import { MediaAttachments } from "./media-attachements";
+import { PostToolbar } from "./post-toolbar";
 import { VoiceRecorderModal } from "./VoiceRecorderModal";
 
 export interface CommentSubmitPayload {

@@ -7,7 +7,7 @@
 // The dropdown's actual rendering lives in MentionDropdown.tsx instead,
 // which IS restyled for the new design.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useGetData } from "@/hooks/api/use-api";
 import { useAppSelector } from "@/services/hook";
 import type { RootState } from "@/services/store";

@@ -348,7 +348,7 @@
 
 import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { SEED_FEED, byHandle, useAppStore } from "@/lib/core";
+import { byHandle, useAppStore } from "@/lib/core";
 import {
   Avatar,
   Icon,
@@ -366,9 +366,7 @@ export default function CreatorProfilePage() {
   const { handle = "" } = useParams<{ handle: string }>();
   const S = useAppStore();
   const navigate = useNavigate();
-  const c = byHandle(handle);
   const [tab, setTab] = useState("Posts");
-  const isSub = !!S.subs[c.handle];
 
   const { data: profileData } = useGetData({
     url: `profile/${handle}`,
@@ -377,6 +375,24 @@ export default function CreatorProfilePage() {
 
   const creatorProfile = (profileData as { data?: CreatorUser } | undefined)
     ?.data;
+
+  // The Subscribe / Gift / Tip modals were written for a mock `Creator`, and
+  // byHandle() falls back to CREATORS[0] for any creator it doesn't know —
+  // i.e. every real one — which sent gifts, tips and subscriptions to the WRONG
+  // person. Start from whatever it returns (so the modals still get every field
+  // they expect) and overwrite the identity with the real profile. `live` only
+  // exists in the mock directory, so an unknown creator is never "live".
+  // (price and tag still come from the mock: there's no real data for them yet.)
+  const mock = byHandle(handle);
+  const known = mock.handle === handle;
+  const c = {
+    ...mock,
+    id: known ? mock.id : handle,
+    handle,
+    name: creatorProfile?.fullName ?? (known ? mock.name : handle),
+    live: known ? mock.live : false,
+  };
+  const isSub = !!S.subs[c.handle];
 
   const {
     data: creatorContentPages,
