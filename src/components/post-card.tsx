@@ -853,7 +853,7 @@ export function PostCard({
 
   return (
     <div
-      className="card"
+      className="card cursor-pointer"
       style={{ padding: 18 }}
       ref={rootRef}
       onClick={

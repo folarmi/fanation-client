@@ -11,6 +11,7 @@ import ForgotPassword from "@/routes/forgot-password";
 import ResetPassword from "@/routes/reset-password";
 import { useIdlePrefetch } from "@/lib/prefetch";
 import ProtectedRoute from "./protected-route";
+import PostDetailPage from "@/routes/post-detail";
 
 /**
  * Public entry pages are loaded immediately.
@@ -118,6 +119,8 @@ export default function AppRoutes() {
           {/* Fan surface */}
           <Route path="/feed" element={<FeedPage />} />
 
+          <Route path="/feed/:id" element={<PostDetailPage />} />
+
           <Route path="/profile" element={<ProfilePage />} />
 
           <Route path="/profile/edit" element={<EditProfilePage />} />
@@ -142,21 +145,39 @@ export default function AppRoutes() {
 
           <Route path="/settings" element={<SettingsPage />} />
 
-          <Route path="/settings/notifications" element={<SettingsNotificationsPage />} />
+          <Route
+            path="/settings/notifications"
+            element={<SettingsNotificationsPage />}
+          />
 
           <Route path="/settings/display" element={<SettingsDisplayPage />} />
 
           <Route path="/settings/privacy" element={<SettingsPrivacyPage />} />
 
-          <Route path="/settings/account/change-password" element={<SettingsPasswordPage />} />
+          <Route
+            path="/settings/account/change-password"
+            element={<SettingsPasswordPage />}
+          />
 
-          <Route path="/settings/account/login-sessions" element={<SettingsSessionsPage />} />
+          <Route
+            path="/settings/account/login-sessions"
+            element={<SettingsSessionsPage />}
+          />
 
-          <Route path="/settings/account/two-factor" element={<SettingsTwoFactorPage />} />
+          <Route
+            path="/settings/account/two-factor"
+            element={<SettingsTwoFactorPage />}
+          />
 
-          <Route path="/settings/account/link/:provider" element={<SettingsLinkAccountPage />} />
+          <Route
+            path="/settings/account/link/:provider"
+            element={<SettingsLinkAccountPage />}
+          />
 
-          <Route path="/settings/account/delete-account" element={<SettingsDeleteAccountPage />} />
+          <Route
+            path="/settings/account/delete-account"
+            element={<SettingsDeleteAccountPage />}
+          />
 
           <Route path="/creator/:handle" element={<CreatorProfilePage />} />
 

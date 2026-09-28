@@ -16,7 +16,7 @@ import { useAppSelector } from "@/services/hook";
 import type { RootState } from "@/services/store";
 import { PostCard } from "@/components/post-card";
 import { mapContentToFeedPost, type RawContent } from "@/lib/adapters/content";
-import { CommentThread } from "./comment-thread";
+import { CommentThread } from "../components/comment-thread";
 
 export default function PostDetailPage() {
   const { id = "" } = useParams<{ id: string }>();
