@@ -738,7 +738,7 @@ import { useAppSelector } from "@/services/hook";
 import { RootState } from "@/services/store";
 import { CreatorUser } from "@/utils/types";
 import type { RawContent } from "@/lib/adapters/content";
-import { PollComposer } from "@/components/poll-composer";
+import { PostComposer } from "@/components/post-composer";
 
 /* Each person's story is a short reel, not one frame — 2 to 4 segments,
    picked deterministically per handle so the count doesn't reshuffle on
@@ -1016,7 +1016,11 @@ export default function FeedPage() {
   const { userObject } = useAppSelector((state: RootState) => state.auth);
 
   const [story, setStory] = useState<number | null>(null);
-  const [showPoll, setShowPoll] = useState(false);
+  // null = the compact card; otherwise the full composer is open — as a normal
+  // post, a poll, or a post with "schedule for later" already switched on
+  const [composer, setComposer] = useState<null | "post" | "poll" | "schedule">(
+    null,
+  );
 
   // Real feed data. This replaces the old `const feed = S.feed();` mock read —
   // `S` (useAppStore) is still used below for everything that's genuinely
@@ -1048,9 +1052,13 @@ export default function FeedPage() {
     () =>
       rawFeed.filter(
         (raw) =>
-          !S.blocked[raw.creator?.username] && !S.muted[raw.creator?.username],
+          !S.blocked[raw.creator?.username] &&
+          !S.muted[raw.creator?.username] &&
+          // "Not interested" -> S.hide(id). If your store keeps hidden ids
+          // under a different name than `hidden`, this is the one line to change.
+          !S.hidden?.[raw.publicId],
       ),
-    [rawFeed, S.blocked, S.muted],
+    [rawFeed, S.blocked, S.muted, S.hidden],
   );
 
   const { data: getAllCreators, isLoading: getAllCreatorsIsLoading } =
@@ -1177,50 +1185,61 @@ export default function FeedPage() {
           {story != null && (
             <StoryViewer key={story} idx={story} close={() => setStory(null)} />
           )}
-          <div className="card" style={{ padding: 16 }}>
-            <div className="row gap12">
-              <Avatar name="You" size={40} />
-              <input
-                className="input"
-                placeholder="Share something with your fans…"
-                readOnly
-                style={{ cursor: "pointer" }}
-                onClick={() => S.openModal("compose")}
-              />
-            </div>
-            <div className="row between" style={{ marginTop: 12 }}>
-              <div className="row gap16 muted">
-                {["camera", "play", "gift", "cal"].map((i) => (
-                  <span
-                    key={i}
-                    style={{ cursor: "pointer" }}
-                    onClick={() => S.openModal("compose")}
-                  >
-                    <Icon n={i} s={19} solid />
-                  </span>
-                ))}
-                {/* Polls open inline rather than in the compose modal — the old
-                    CommentBox swapped itself for the poll form the same way. */}
-                <span
+          {composer ? (
+            <PostComposer
+              initialMode={composer === "poll" ? "poll" : "post"}
+              initialScheduling={composer === "schedule"}
+              onClose={() => setComposer(null)}
+            />
+          ) : (
+            <div className="card" style={{ padding: 16 }}>
+              <div className="row gap12">
+                <Avatar name="You" size={40} />
+                <input
+                  className="input"
+                  placeholder="Share something with your fans…"
+                  readOnly
                   style={{ cursor: "pointer" }}
-                  onClick={() => setShowPoll(true)}
-                >
-                  <Icon n="poll" s={19} solid />
-                </span>
+                  onClick={() => setComposer("post")}
+                />
               </div>
-              <div className="row gap10">
-                <button
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => navigate("/studio/live")}
-                >
-                  <Icon n="live" s={15} c="var(--coral-ink)" solid />
-                  Go Live
-                </button>
+              <div className="row between" style={{ marginTop: 12 }}>
+                <div className="row gap16 muted">
+                  {["camera", "play", "gift", "cal"].map((i) => (
+                    <span
+                      key={i}
+                      style={{ cursor: "pointer" }}
+                      // camera/play open the composer; cal opens it with scheduling
+                      // on. gift (paid posts) isn't built yet, so it keeps opening
+                      // the existing compose modal exactly as before.
+                      onClick={() =>
+                        i === "gift"
+                          ? S.openModal("compose")
+                          : setComposer(i === "cal" ? "schedule" : "post")
+                      }
+                    >
+                      <Icon n={i} s={19} solid />
+                    </span>
+                  ))}
+                  <span
+                    style={{ cursor: "pointer" }}
+                    onClick={() => setComposer("poll")}
+                  >
+                    <Icon n="poll" s={19} solid />
+                  </span>
+                </div>
+                <div className="row gap10">
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => navigate("/studio/live")}
+                  >
+                    <Icon n="live" s={15} c="var(--coral-ink)" solid />
+                    Go Live
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-
-          {showPoll && <PollComposer onClose={() => setShowPoll(false)} />}
+          )}
 
           {feedLoading && (
             <div className="card row center" style={{ padding: 48 }}>

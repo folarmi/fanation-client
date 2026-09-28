@@ -198,6 +198,23 @@
 //   delete a comment   DELETE contents/comments/{commentId}/remove  (DeleteButton)
 //   poll vote          PATCH  contents/{postId}/poll-vote/{choiceId} (AnsweredPoll)
 
+// src/hooks/useContentInteractions.ts
+//
+// All the write-side API calls, in one place. Components call `react("LIKE")`,
+// `toggleBookmark()`, `addComment(...)`, `usePollVote(...)` — they never touch
+// useCustomMutation or the query cache directly.
+//
+// Every endpoint below is taken from the old project's own code:
+//   like / unlike      POST   contents/reactions  { pubId, reactionType }
+//                      DELETE contents/{id}/reactions
+//                      (the old Postcard used these for posts AND comments)
+//   bookmark           POST   contents/saves      { contentPublicId, saveType }
+//   view               POST   contents/{id}/view
+//   comment on a post  POST   contents/{postId}/comments            (CommentThread)
+//   reply to a comment POST   contents/comments/{commentId}/replies (CommentItem)
+//   delete a comment   DELETE contents/comments/{commentId}/remove  (DeleteButton)
+//   poll vote          PATCH  contents/{postId}/poll-vote/{choiceId} (AnsweredPoll)
+
 import { useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCustomMutation } from "@/hooks/api/use-api";
@@ -208,7 +225,7 @@ import type {
   ReactionType,
   BookMark,
 } from "@/utils/types";
-import { useAppStore } from "@/lib/core";
+import { useNotify } from "./useNotify";
 
 /** Paginated list caches shaped { pages: [{ data: { content: [] } }] }.
  *  Add a key here when a new screen lists posts, and likes/bookmarks/votes
@@ -277,7 +294,7 @@ function useContentCacheUpdater() {
 
 /** Refetch every cache that can show this content. Shared by all the hooks
  *  below so a new list key only ever needs adding to LIST_KEYS. */
-function useInvalidateContent() {
+export function useInvalidateContent() {
   const queryClient = useQueryClient();
   return () => {
     [...LIST_KEYS, DETAIL_KEY].forEach((key) =>
@@ -298,6 +315,7 @@ export function useContentInteractions(
 ) {
   const updateCache = useContentCacheUpdater();
   const invalidate = useInvalidateContent();
+  const notify = useNotify();
 
   // On failure, refetch too — otherwise the optimistic heart/bookmark stays
   // on screen even though the server rejected it.
@@ -323,6 +341,13 @@ export function useContentInteractions(
         ? `contents/comments/${publicId}/replies`
         : `contents/${publicId}/comments`,
     onSuccessCallback: invalidate,
+    // Same wording the old CommentBox used for replies.
+    successMessage: () =>
+      kind === "comment"
+        ? "Reply added successfully"
+        : "Comment added successfully",
+    onError: (err: any) =>
+      notify.error(err?.response?.data?.message || "An error occurred"),
   });
   const viewMutation = useCustomMutation({
     endpoint: `contents/${publicId}/view`,
@@ -439,7 +464,7 @@ export function usePollVote(
 ) {
   const updateCache = useContentCacheUpdater();
   const invalidate = useInvalidateContent();
-  const S = useAppStore();
+  const notify = useNotify();
 
   const voteMutation = useCustomMutation({
     endpoint: `contents/${publicId}/poll-vote/${choiceId}`,
@@ -447,8 +472,8 @@ export function usePollVote(
     onSuccessCallback: invalidate,
     successMessage: () => "Vote submitted!",
     onError: (err: any) => {
-      invalidate();
-      S.toast(err?.response?.data?.message || "An error occurred", "err");
+      invalidate(); // roll back the optimistic vote below
+      notify.error(err?.response?.data?.message || "An error occurred");
     },
   });
 

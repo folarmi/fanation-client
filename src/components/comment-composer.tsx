@@ -217,27 +217,25 @@
 
 // src/components/post-card/CommentComposer.tsx
 //
-// The new design's version of the old project's CommentBox, scoped to
-// replying to a post: mentions + media attachments carried over as
-// functionality, poll/voice-note/schedule intentionally left out (see the
-// note on PostToolbar.tsx) since those belong to the top-level post composer.
+// The new design's version of the old CommentBox in its comment / reply form:
+// @mentions, attachments (shared rules via useFileQueue) and voice notes.
+// Scheduling and polls don't apply to a comment, so they're not offered.
 
 import { useRef, useState } from "react";
 import { Avatar, Icon } from "@/lib/ui";
 import { useUploadFiles } from "@/hooks/useUploadFiles"; // port this over if it isn't already in the new project
 import { useAppSelector } from "@/services/hook";
 import type { RootState } from "@/services/store";
+import type { MediaItem } from "@/utils/types";
+
 import { useMentionUsers, useMentions } from "@/hooks/useMentions";
-import { MediaItem } from "@/utils/types";
-import { useAppStore } from "@/lib/core";
 import { getMediaType } from "@/utils/helper";
 import { MentionDropdown } from "./mention-dropdown";
-import { MediaAttachments } from "./media-attachements";
 import { PostToolbar } from "./post-toolbar";
-
-const MAX_TOTAL_BYTES = 50 * 1024 * 1024;
-const MAX_FILE_BYTES = 10 * 1024 * 1024;
-const formatMB = (bytes: number) => (bytes / (1024 * 1024)).toFixed(1);
+import { MediaAttachments } from "./media-attachements";
+import { useNotify } from "@/hooks/useNotify";
+import { useFileQueue } from "@/hooks/useFileQueue";
+import { VoiceRecorderModal } from "./VoiceRecorderModal";
 
 export interface CommentSubmitPayload {
   message: string;
@@ -257,11 +255,12 @@ export function CommentComposer({
   placeholder?: string;
   autoFocus?: boolean;
 }) {
+  const notify = useNotify();
   const { userObject } = useAppSelector((s: RootState) => s.auth);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [text, setText] = useState("");
-  const [queuedFiles, setQueuedFiles] = useState<File[]>([]);
-  const toast = useAppStore((s) => s.toast);
+  const [recorderOpen, setRecorderOpen] = useState(false);
+  const { files, addFiles, removeFile, clear, totalMB } = useFileQueue();
 
   const { mentionableUsers, isLoading: mentionUsersLoading } =
     useMentionUsers();
@@ -283,66 +282,27 @@ export function CommentComposer({
     reset: resetUpload,
   } = useUploadFiles({
     usid: userObject?.usid,
-    onError: (error: any) =>
-      toast(error?.message || "Something went wrong", "err"),
+    onError: (error: any) => notify.error(error?.message || "Upload failed"),
   });
 
-  const totalMB = formatMB(queuedFiles.reduce((sum, f) => sum + f.size, 0));
-
-  const addFiles = (incoming: File[]) => {
-    const oversized = incoming.filter((f) => f.size > MAX_FILE_BYTES);
-    const withinLimit = incoming.filter((f) => f.size <= MAX_FILE_BYTES);
-
-    if (oversized.length) {
-      toast(
-        `${oversized.map((f) => f.name).join(", ")} exceed${
-          oversized.length === 1 ? "s" : ""
-        } the 10MB per-file limit`,
-        "err",
-      );
-    }
-    if (!withinLimit.length) return;
-
-    const currentTotal = queuedFiles.reduce((sum, f) => sum + f.size, 0);
-    const incomingTotal = withinLimit.reduce((sum, f) => sum + f.size, 0);
-    if (currentTotal + incomingTotal > MAX_TOTAL_BYTES) {
-      const remaining = MAX_TOTAL_BYTES - currentTotal;
-
-      toast(
-        remaining <= 0
-          ? "You've reached the 50MB total upload limit"
-          : `Adding these files would exceed the 50MB total limit (${formatMB(remaining)}MB remaining)`,
-        "err",
-      );
-
-      return;
-    }
-
-    setQueuedFiles((prev) => [...prev, ...withinLimit]);
-  };
-
-  const removeFile = (index: number) => {
-    setQueuedFiles((prev) => prev.filter((_, i) => i !== index));
-  };
-
   const canSubmit =
-    (text.trim().length > 0 || queuedFiles.length > 0) &&
+    (text.trim().length > 0 || files.length > 0) &&
     !isSubmitting &&
     !isUploading;
 
   const submit = async () => {
     if (!canSubmit) return;
 
-    if (queuedFiles.length > 0) {
+    if (files.length > 0) {
       try {
-        const mediaLinks = await uploadFiles(queuedFiles);
+        const mediaLinks = await uploadFiles(files);
         onSubmit({
           message: text.trim(),
           mentions: mentionIds,
           mediaFiles: mediaLinks,
-          mediaType: getMediaType(queuedFiles),
+          mediaType: getMediaType(files),
         });
-        setQueuedFiles([]);
+        clear();
         resetUpload();
       } catch (error) {
         console.error("Upload failed:", error);
@@ -353,6 +313,18 @@ export function CommentComposer({
     }
 
     setText("");
+  };
+
+  const handleRecordingComplete = (blob: Blob) => {
+    const ext = blob.type.includes("mp4")
+      ? "m4a"
+      : blob.type.includes("ogg")
+        ? "ogg"
+        : "webm";
+    addFiles([
+      new File([blob], `voice-note-${Date.now()}.${ext}`, { type: blob.type }),
+    ]);
+    notify.success("Voice note added successfully");
   };
 
   return (
@@ -406,17 +378,27 @@ export function CommentComposer({
       </div>
 
       <div style={{ paddingLeft: 42 }}>
-        <PostToolbar onFilesSelected={addFiles} />
+        <PostToolbar
+          onFilesSelected={addFiles}
+          ifRecord
+          onRecordClick={() => setRecorderOpen(true)}
+        />
       </div>
 
       <div style={{ paddingLeft: 42 }}>
         <MediaAttachments
-          files={queuedFiles}
+          files={files}
           onRemove={removeFile}
           totalMB={totalMB}
           maxMB={50}
         />
       </div>
+
+      <VoiceRecorderModal
+        isOpen={recorderOpen}
+        onClose={() => setRecorderOpen(false)}
+        onRecordingComplete={handleRecordingComplete}
+      />
     </div>
   );
 }

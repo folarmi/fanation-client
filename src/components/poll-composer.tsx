@@ -11,7 +11,7 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Icon } from "@/lib/ui";
 import { useCustomMutation } from "@/hooks/api/use-api";
-import { useAppStore } from "@/lib/core";
+import { useNotify } from "@/hooks/useNotify";
 
 const MIN_OPTIONS = 2;
 const MAX_OPTIONS = 5;
@@ -33,8 +33,7 @@ export function PollComposer({
   onPosted?: () => void;
 }) {
   const queryClient = useQueryClient();
-  const toast = useAppStore((s) => s.toast);
-
+  const notify = useNotify();
   const [question, setQuestion] = useState("");
   const [options, setOptions] = useState<string[]>(["", ""]);
   const [duration, setDuration] = useState({ days: 1, hours: 0, minutes: 0 });
@@ -51,7 +50,7 @@ export function PollComposer({
     },
     successMessage: () => "Poll posted successfully",
     onError: (err: any) =>
-      toast(err?.response?.data?.message || "Could not post poll", "err"),
+      notify.error(err?.response?.data?.message || "Could not post poll"),
   });
 
   const setOption = (index: number, value: string) =>
@@ -73,16 +72,16 @@ export function PollComposer({
   const submit = () => {
     const { days, hours, minutes } = duration;
     if (!days && !hours && !minutes) {
-      toast("Set at least one duration", "err");
+      notify.error("Set at least one duration");
       return;
     }
     if (!question.trim()) {
-      toast("Please enter a question", "err");
+      notify.error("Please enter a question");
       return;
     }
     const validOptions = options.map((o) => o.trim()).filter(Boolean);
     if (validOptions.length < MIN_OPTIONS) {
-      toast("Please provide at least 2 options", "err");
+      notify.error("Please provide at least 2 options");
       return;
     }
 

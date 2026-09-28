@@ -23,10 +23,11 @@ import {
   useDeleteComment,
 } from "@/hooks/useContentInteractions";
 import type { FeedComment, FeedMedia } from "@/lib/adapters/content";
-import { formatTimeAgo } from "@/utils/helper";
-import { CommentComposer } from "./comment-composer";
 import { MediaExtras } from "./media-extras";
 import { MediaLightbox } from "./media-light-box";
+import { formatTimeAgo } from "@/utils/helper";
+import { CommentComposer } from "./comment-composer";
+import { MentionText } from "./MentionText";
 
 const MAX_DEPTH = 6;
 
@@ -203,7 +204,7 @@ function CommentItem({
               className="t14"
               style={{ lineHeight: 1.5, whiteSpace: "pre-wrap" }}
             >
-              {comment.text}
+              <MentionText text={comment.text} />
             </span>
           )}
           <CommentMedia media={comment.media} />

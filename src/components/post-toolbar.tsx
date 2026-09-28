@@ -5,7 +5,7 @@
 // ifPoll/ifRecord/ifSchedule flags, but built from the new design's `Icon`
 // component instead of importing separate custom SVG files per action, and
 // with a real (if minimal) file-picker in place of the old `PostUploader`
-// (whose source wasn't provided).
+// (the accepted types now match its list — see useFileQueue.ts).
 //
 // Only the media-attach button is wired end-to-end right now — poll/record/
 // schedule fire the same callbacks the old component did, so whoever builds
@@ -14,12 +14,14 @@
 
 import { useRef } from "react";
 import { Icon } from "@/lib/ui";
+import { ACCEPT_ATTR } from "@/hooks/useFileQueue";
 
 export function PostToolbar({
   onFilesSelected,
   ifPoll,
   ifRecord,
   ifSchedule,
+  scheduleActive,
   onStartPoll,
   onRecordClick,
   onToggleSchedule,
@@ -28,6 +30,8 @@ export function PostToolbar({
   ifPoll?: boolean;
   ifRecord?: boolean;
   ifSchedule?: boolean;
+  /** Highlights the calendar button while scheduling is switched on. */
+  scheduleActive?: boolean;
   onStartPoll?: () => void;
   onRecordClick?: () => void;
   onToggleSchedule?: () => void;
@@ -40,7 +44,7 @@ export function PostToolbar({
         ref={fileInputRef}
         type="file"
         multiple
-        accept="image/*,video/*"
+        accept={ACCEPT_ATTR}
         style={{ display: "none" }}
         onChange={(e) => {
           const files = Array.from(e.target.files ?? []);
@@ -66,8 +70,21 @@ export function PostToolbar({
         </span>
       )}
       {ifSchedule && (
-        <span style={{ cursor: "pointer" }} onClick={onToggleSchedule}>
-          <Icon n="cal" s={19} solid />
+        <span
+          style={{
+            cursor: "pointer",
+            color: scheduleActive ? "var(--blueL-ink)" : undefined,
+          }}
+          onClick={onToggleSchedule}
+          aria-pressed={scheduleActive}
+          title={scheduleActive ? "Post now instead" : "Schedule for later"}
+        >
+          <Icon
+            n="cal"
+            s={19}
+            solid
+            c={scheduleActive ? "var(--blueL-ink)" : undefined}
+          />
         </span>
       )}
     </div>

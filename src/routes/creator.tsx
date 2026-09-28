@@ -360,6 +360,7 @@ import {
 import { FollowBtn, PostCard } from "@/components/post-card";
 import { useGetData, useInfiniteGetData } from "@/hooks/api/use-api";
 import { CreatorUser } from "@/utils/types";
+import { MediaTab } from "@/components/MediaTab";
 
 export default function CreatorProfilePage() {
   const { handle = "" } = useParams<{ handle: string }>();
@@ -368,7 +369,6 @@ export default function CreatorProfilePage() {
   const c = byHandle(handle);
   const [tab, setTab] = useState("Posts");
   const isSub = !!S.subs[c.handle];
-  const posts = SEED_FEED.filter((p) => p.h === c.handle).slice(0, 6);
 
   const { data: profileData } = useGetData({
     url: `profile/${handle}`,
