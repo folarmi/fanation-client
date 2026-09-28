@@ -584,7 +584,7 @@ function ComposeModal({ defaultVis }: { defaultVis?: string }) {
 }
 
 function PayoutModal() {
-  const { payoutError, requestPayout, closeModal } = useAppStore();
+  const { payoutError, requestPayout, closeModal, toast } = useAppStore();
   const [amt, setAmt] = useState("4280");
   const n = parseInt(amt || "0", 10);
   const err = payoutError(n);
@@ -593,28 +593,6 @@ function PayoutModal() {
       <div className="b7 t20" style={{ marginBottom: 4 }}>
         Withdraw earnings
       </div>
-      <div className="muted t13" style={{ marginBottom: 16 }}>
-        Available: $4,280.00 · arrives in 1–3 business days.
-      </div>
-      <label className="label">Amount</label>
-      <div
-        className="row hair"
-        style={{
-          padding: "0 14px",
-          borderRadius: 14,
-          marginBottom: 6,
-          gap: 6,
-          borderColor: err ? "rgba(243,106,70,.5)" : "var(--line)",
-        }}
-      >
-        <span className="muted t18">$</span>
-        <input
-          className="input"
-          style={{ border: "none", background: "none" }}
-          value={amt}
-          onChange={(e) => setAmt(e.target.value.replace(/[^0-9]/g, ""))}
-        />
-      </div>
       {err && (
         <div className="coral t12" style={{ marginBottom: 10 }}>
           {err}
@@ -622,7 +600,7 @@ function PayoutModal() {
       )}
       <div
         className="row between hair"
-        style={{ padding: "12px 14px", borderRadius: 12, margin: "8px 0 16px" }}
+        style={{ padding: "12px 14px", borderRadius: 12, marginTop: 8 }}
       >
         <div className="row gap10">
           <Icon n="wallet" s={18} />
@@ -630,6 +608,18 @@ function PayoutModal() {
         </div>
         <span className="chip-mint">Default</span>
       </div>
+      <button
+        className="btn btn-ghost btn-block btn-sm"
+        style={{ margin: "8px 0 16px" }}
+        onClick={() =>
+          toast(
+            "Bank/card form opens here — details are tokenised, we never store them",
+          )
+        }
+      >
+        <Icon n="plus" s={15} />
+        Add withdrawal method
+      </button>
       <button
         className="btn btn-grad btn-block"
         disabled={!!err}

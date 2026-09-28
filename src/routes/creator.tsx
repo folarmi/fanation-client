@@ -368,6 +368,44 @@ import { useGetData, useInfiniteGetData } from "@/hooks/api/use-api";
 import { CreatorUser } from "@/utils/types";
 import { MediaTab } from "@/components/MediaTab";
 
+/* Streams tab — disabled for now, kept here rather than deleted so it can be
+   dropped back in later. Re-enabling it needs these extra imports too:
+   `import { LIVE_TITLES, fhash } from "@/lib/core"; import type { Creator } from "@/lib/core";
+   import { mediaFor, poolFor } from "@/lib/ui";`
+
+const PAST_TITLES = [
+  "Chatting with the community",
+  "Q&A + behind the scenes",
+  "Getting ready with me",
+  "Weekend hangout",
+  "Answering your questions",
+  "Late night session",
+];
+
+// A creator's broadcast history — deterministic from their id, the same way
+// every other seed list in this app (LIVE_TITLES, gridFor…) is, so the same
+// creator always shows the same past streams rather than reshuffling on
+// every render.
+function pastStreamsFor(c: Creator, n = 6) {
+  return Array.from({ length: n }, (_, i) => {
+    const h = fhash(`${c.id}-vod-${i}`);
+    return {
+      id: `${c.id}-vod-${i}`,
+      title: PAST_TITLES[h % PAST_TITLES.length],
+      mins: 25 + (h % 95),
+      views: 800 + (h % 12000),
+      daysAgo: 1 + i * 2 + (h % 3),
+      thumb: mediaFor(poolFor(c.handle), i + 3),
+    };
+  });
+}
+*/
+
+/**
+ * `/creator/:handle`. The handle comes off the URL, so it is `string | undefined`
+ * until the router has matched — `byHandle` falls back to the first seeded creator
+ * rather than throwing, which keeps a hand-typed or stale link on a real page.
+ */
 export default function CreatorProfilePage() {
   const { handle = "" } = useParams<{ handle: string }>();
   const S = useAppStore();

@@ -18,6 +18,13 @@ interface Fly {
   x: number;
 }
 
+// Twitch's own default username palette — chosen to stay legible on a dark
+// video backdrop rather than for brand match.
+const NAME_COLORS = [
+  "#ff4d4f", "#ff7a45", "#ffa940", "#ffc53d", "#bae637", "#73d13d",
+  "#36cfc9", "#40a9ff", "#597ef7", "#9254de", "#f759ab", "#ff85c0",
+];
+
 /** One creator's live room — full simulation: chat streams, viewers/earnings
     tick, gifts fly. Production: feed this state machine from the RTC data
     channel (Agora/LiveKit). A handle that isn't live falls back to the first
@@ -35,7 +42,7 @@ export default function LiveStreamPage() {
   const firstName = c.name.split(" ")[0];
 
   const [chat, setChat] = useState<ChatLine[]>([
-    ["@marcus_t", "joined the stream", ""],
+    ["@marcus_t", "dropped a 🔥🔥", "msg"],
     ["@jayden", "sent 500 coins", "coin"],
     ["@priscilla", "sent a $25 gift 🎁", "gift"],
     ["@superfan", "sent 200 coins", "coin"],
@@ -44,30 +51,55 @@ export default function LiveStreamPage() {
   // Distinct starting numbers per creator, so switching streams doesn't show the same room.
   const seed = fhash(c.id);
   const [viewers, setViewers] = useState(3600 + (seed % 2400));
-  const [earned, setEarned] = useState(400 + (seed % 1800));
   const [likes, setLikes] = useState(14000 + (seed % 30000));
   const [flies, setFlies] = useState<Fly[]>([]);
   const [dur, setDur] = useState(seed % 4000);
   const [msg, setMsg] = useState("");
   const [heart, setHeart] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
   const n = useRef(6);
+
+  // Player controls. There's no real seekable buffer behind a live feed — what
+  // "rewind" and "forward" actually adjust is how far behind the live edge the
+  // viewer currently is, the same DVR concept every live platform uses: pausing
+  // (or rewinding) falls behind, forwarding catches back up, and 0 means live.
+  const [paused, setPaused] = useState(false);
+  const [muted, setMuted] = useState(true);
+  const [behindSec, setBehindSec] = useState(0);
+  const [fullscreen, setFullscreen] = useState(false);
+  const jumpToLive = () => { setBehindSec(0); setPaused(false); };
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else stageRef.current?.requestFullscreen();
+  };
+  useEffect(() => {
+    const h = () => setFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", h);
+    return () => document.removeEventListener("fullscreenchange", h);
+  }, []);
+  useEffect(() => {
+    if (!paused) return;
+    const id = setInterval(() => setBehindSec((s) => s + 1), 1000);
+    return () => clearInterval(id);
+  }, [paused]);
 
   // A fresh room state when the stream itself changes, not just a re-render.
   useEffect(() => {
     setChat([
-      ["@marcus_t", "joined the stream", ""],
+      ["@marcus_t", "dropped a 🔥🔥", "msg"],
       ["@jayden", "sent 500 coins", "coin"],
       ["@priscilla", "sent a $25 gift 🎁", "gift"],
       ["@superfan", "sent 200 coins", "coin"],
       ["@zara_ali", "this set is insane 😍", "msg"],
     ]);
     setViewers(3600 + (seed % 2400));
-    setEarned(400 + (seed % 1800));
     setLikes(14000 + (seed % 30000));
     setFlies([]);
     setDur(seed % 4000);
     setHeart(false);
+    setPaused(false);
+    setBehindSec(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [c.id]);
 
@@ -76,10 +108,14 @@ export default function LiveStreamPage() {
       n.current++;
       const k = n.current;
       const name = LIVE_NAMES[(k * 7) % LIVE_NAMES.length];
-      const line = LIVE_LINES[(k * 3 + (k % 4)) % LIVE_LINES.length];
+      // Join events (empty type) are what the streamer's own dashboard shows,
+      // not something a fellow viewer's chat feed would ever surface.
+      const pool = LIVE_LINES.filter((l) => l[1] !== "");
+      const line = pool[(k * 3 + (k % 4)) % pool.length];
       setChat((c) => [...c, [name, line[0], line[1]] as ChatLine].slice(-24));
       setViewers((v) => Math.max(3600, v + ((k * 17) % 94) - 40));
       setLikes((l) => l + ((k * 11) % 40) + 3);
+<<<<<<< HEAD
       if (line[1] === "coin")
         setEarned((e) => +(e + [50, 200, 500, 1000][k % 4] * 0.012).toFixed(2));
       if (line[1] === "gift") {
@@ -91,6 +127,11 @@ export default function LiveStreamPage() {
             { id: `s${k}`, txt: `🎁 $${g}`, x: 12 + ((k * 29) % 64) },
           ].slice(-5),
         );
+=======
+      if (line[1] === "gift") {
+        const g = [10, 25, 50][k % 3];
+        setFlies((f) => [...f, { id: `s${k}`, txt: `🎁 $${g}`, x: 12 + ((k * 29) % 64) }].slice(-5));
+>>>>>>> 7316819bc09288474c5ae807bfc08b740165f05a
       }
     }, 1900);
     const tick = setInterval(() => setDur((d) => d + 1), 1000);
@@ -103,6 +144,7 @@ export default function LiveStreamPage() {
     if (boxRef.current) boxRef.current.scrollTop = boxRef.current.scrollHeight;
   }, [chat]);
 
+<<<<<<< HEAD
   const mmss = (s: number) =>
     `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
   const tone = (t: string): [string, string, string] =>
@@ -113,6 +155,22 @@ export default function LiveStreamPage() {
         : t === "sub" || t === "me"
           ? ["rgba(37,153,246,.14)", "rgba(37,153,246,.36)", "var(--blueL-ink)"]
           : ["", "", "var(--text)"];
+=======
+  const [channelsOpen, setChannelsOpen] = useState(true);
+  const [chatOpen, setChatOpen] = useState(true);
+  const isSub = !!S.subs[c.handle];
+  // Every other live creator, so watching one stream is one click from the next
+  // — the same "who else is live right now" rail a real streaming directory has.
+  const otherLive = CREATORS.filter((x) => x.live && x.handle !== c.handle && !S.blocked[x.handle]);
+  // Deterministic, not stored — nothing elsewhere in the app needs a per-creator
+  // follower count yet, so it isn't worth adding to the Creator shape for one section.
+  const followers = 1200 + (fhash(c.id) % 18000);
+
+  const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  // Twitch-style chat: no per-message bubble, just a consistent color per
+  // username (hashed, so the same handle always lands on the same color).
+  const nameColor = (name: string) => NAME_COLORS[fhash(name) % NAME_COLORS.length];
+>>>>>>> 7316819bc09288474c5ae807bfc08b740165f05a
   const { still, loop } = reelFor(c.handle);
   const sendChat = () => {
     const v = msg.trim();
@@ -127,6 +185,7 @@ export default function LiveStreamPage() {
     }
     n.current++;
     const k = n.current;
+<<<<<<< HEAD
     setChat((ch) =>
       [
         ...ch,
@@ -140,11 +199,16 @@ export default function LiveStreamPage() {
       ].slice(-5),
     );
     setEarned((e) => +(e + cost * 0.01).toFixed(2));
+=======
+    setChat((ch) => [...ch, ["@you", `sent ${emoji} · ${cost} coins`, "gift"] as ChatLine].slice(-24));
+    setFlies((f) => [...f, { id: `m${k}`, txt: `${emoji} ${cost}`, x: 12 + ((k * 29) % 64) }].slice(-5));
+>>>>>>> 7316819bc09288474c5ae807bfc08b740165f05a
     S.toast(`Gift ${emoji} sent to ${firstName}`, "ok");
   };
 
   return (
     <div className="content" style={{ maxWidth: "none" }}>
+<<<<<<< HEAD
       <div
         className="row between"
         style={{ marginBottom: 14, flexWrap: "wrap", gap: 10 }}
@@ -186,8 +250,44 @@ export default function LiveStreamPage() {
           </button>
         </div>
       </div>
+=======
+>>>>>>> 7316819bc09288474c5ae807bfc08b740165f05a
       <div className="split" style={{ alignItems: "stretch", gap: 20 }}>
+        {/* Who else is live right now — one click to the next stream, collapsible
+            the same way the main sidebar is (D-cc5a686): a width toggle plus
+            conditional content, not a second CSS mechanism to maintain. */}
+        <div className="hide-sm col" style={{ flex: "none", width: channelsOpen ? 240 : 64, transition: "width .15s ease", position: "sticky", top: "var(--topbar-h)", maxHeight: "calc(100vh - var(--topbar-h))", overflowY: "auto" }}>
+          <div className={"row" + (channelsOpen ? " between" : " center")} style={{ padding: "2px 4px 14px" }}>
+            {channelsOpen && <span className="b7 t14">Live channels</span>}
+            <button className="btn btn-ghost btn-sm" style={{ padding: 6 }}
+              onClick={() => setChannelsOpen((v) => !v)} aria-label={channelsOpen ? "Collapse" : "Expand"}>
+              <span className="row" style={{ transform: channelsOpen ? "rotate(180deg)" : undefined }}>
+                <Icon n="chevronRight" s={15} />
+              </span>
+            </button>
+          </div>
+          <div className="col gap4">
+            {otherLive.map((x) => (
+              <div key={x.id} className={"row gap10" + (channelsOpen ? "" : " center")}
+                style={{ padding: channelsOpen ? "6px 4px" : "6px 0", borderRadius: 10, cursor: "pointer" }}
+                onClick={() => navigate(`/live/${x.handle}`)}>
+                <Avatar name={x.name} size={36} ring="var(--coral)" />
+                {channelsOpen && (
+                  <>
+                    <div className="col" style={{ minWidth: 0 }}>
+                      <div className="t13 b6" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{x.name}</div>
+                      <div className="muted2 t12">{x.tag}</div>
+                    </div>
+                    <div className="grow" />
+                    <span className="muted t12">{((fhash(x.id) % 800) / 10 + 5).toFixed(1)}K</span>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
         <div className="grow stage">
+<<<<<<< HEAD
           <div
             className="card"
             style={{
@@ -197,12 +297,20 @@ export default function LiveStreamPage() {
               height: 520,
             }}
           >
+=======
+          {/* Fills the same vertical space Twitch's player does — viewport
+              height minus the topbar, minus just enough for the meta row
+              that sits directly under it — rather than a fixed height that
+              leaves dead space on a tall monitor. */}
+          <div ref={stageRef} className="card" style={{ padding: 0, overflow: "hidden", position: "relative", height: fullscreen ? "100vh" : "calc(100vh - var(--topbar-h) - 120px)", minHeight: 360, background: "#000" }}>
+>>>>>>> 7316819bc09288474c5ae807bfc08b740165f05a
             {/* Every creator streams from a phone, so the source is 9:16 sitting
                 inside a wide player. Every real platform fills the dead space
                 with a blown-up blur of the same frame — black bars read as a
                 broken player, not as a stream. */}
             {loop ? (
               <>
+<<<<<<< HEAD
                 <Photo
                   sizes={SIZES.stage}
                   src={still}
@@ -218,6 +326,10 @@ export default function LiveStreamPage() {
                   priority
                   style={{ background: "transparent" }}
                 />
+=======
+                <Photo sizes={SIZES.stage} src={still} seed={`live${c.id}`} blur={30} scale={1.2} />
+                <Loop key={c.id} src={loop} poster={still} fit="contain" priority active={!paused} sound={!muted} style={{ background: "transparent" }} />
+>>>>>>> 7316819bc09288474c5ae807bfc08b740165f05a
               </>
             ) : (
               <Photo sizes={SIZES.stage} src={still} seed={`live${c.id}`} />
@@ -234,6 +346,7 @@ export default function LiveStreamPage() {
               <span className="dot" />
               LIVE · {mmss(dur)}
             </div>
+<<<<<<< HEAD
             <div
               className="pill t12 onart"
               style={{ position: "absolute", top: 16, right: 16 }}
@@ -289,6 +402,41 @@ export default function LiveStreamPage() {
                     maximumFractionDigits: 2,
                   })}
                 </span>
+=======
+            <div className="pill t12 onart" style={{ position: "absolute", top: 16, right: 16 }}><Icon n="eye" s={13} /> {viewers.toLocaleString()} watching</div>
+            {flies.map((f) => <div key={f.id} className="giftfly" style={{ left: `${f.x}%`, bottom: 96 }}>{f.txt}</div>)}
+            <div className="glass onart row gap6" style={{ position: "absolute", right: 16, bottom: 60, padding: "7px 11px" }}>
+              <Icon n="heart" s={14} c="var(--coral)" fill="var(--coral)" />
+              <span className="b7 t13">{likes.toLocaleString()}</span>
+            </div>
+            {/* The control bar every real player has — play/pause, DVR-style
+                rewind/forward against how far behind live the viewer has fallen,
+                mute, and fullscreen. */}
+            <div className="row between" style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: "10px 14px", background: "linear-gradient(rgba(0,0,0,0), rgba(0,0,0,.65))" }}>
+              <div className="row gap6">
+                <button className="glass onart" style={{ padding: 8, display: "flex" }} onClick={() => setPaused((p) => !p)} aria-label={paused ? "Play" : "Pause"}>
+                  <Icon n={paused ? "play" : "pause"} s={15} />
+                </button>
+                <button className="glass onart" style={{ padding: 8, display: "flex" }} onClick={() => setBehindSec((s) => s + 10)} aria-label="Rewind 10 seconds">
+                  <Icon n="rewind" s={15} />
+                </button>
+                <button className="glass onart" style={{ padding: 8, display: "flex" }} onClick={() => setBehindSec((s) => Math.max(0, s - 10))} aria-label="Forward 10 seconds">
+                  <Icon n="forward" s={15} />
+                </button>
+                {behindSec > 0 && (
+                  <button className="pill t11 onart" style={{ cursor: "pointer" }} onClick={jumpToLive}>
+                    {behindSec}s behind · Jump to live
+                  </button>
+                )}
+              </div>
+              <div className="row gap6">
+                <button className="glass onart" style={{ padding: 8, display: "flex" }} onClick={() => setMuted((m) => !m)} aria-label={muted ? "Unmute" : "Mute"}>
+                  <Icon n={muted ? "volumeMute" : "volumeHigh"} s={15} />
+                </button>
+                <button className="glass onart" style={{ padding: 8, display: "flex" }} onClick={toggleFullscreen} aria-label={fullscreen ? "Exit fullscreen" : "Fullscreen"}>
+                  <Icon n={fullscreen ? "contract" : "expand"} s={15} />
+                </button>
+>>>>>>> 7316819bc09288474c5ae807bfc08b740165f05a
               </div>
             </div>
           </div>
@@ -299,11 +447,19 @@ export default function LiveStreamPage() {
             <div className="row gap12">
               <Avatar name={c.name} size={44} ring="var(--coral)" />
               <div className="col">
+<<<<<<< HEAD
                 <div className="row gap6 b7 uname">
                   {c.name} {c.v && <Verified s={14} />}
                 </div>
                 <div className="muted t13">
                   {LIVE_TITLES[c.id] ?? `${c.tag} · Live now`}
+=======
+                <div className="row gap6 b7 uname">{c.name} {c.v && <Verified s={14} />}</div>
+                <div className="muted t13">{LIVE_TITLES[c.id] ?? `${c.tag} · Live now`}</div>
+                <div className="row gap8" style={{ marginTop: 6, flexWrap: "wrap" }}>
+                  <span className="tag" style={{ border: "none" }}>{c.tag}</span>
+                  <span className="muted t12 row gap4"><Icon n="eye" s={12} />{viewers.toLocaleString()} watching · {mmss(dur)}</span>
+>>>>>>> 7316819bc09288474c5ae807bfc08b740165f05a
                 </div>
               </div>
             </div>
@@ -338,9 +494,30 @@ export default function LiveStreamPage() {
                 <Icon n="gift" s={15} />
                 Send gift
               </button>
+<<<<<<< HEAD
+=======
+              <FollowBtn handle={c.handle} />
+              {isSub ? (
+                <button className="btn btn-ghost btn-sm" style={{ color: "var(--mint-ink)", borderColor: "var(--mint-edge)" }} onClick={() => navigate("/subscriptions")}>
+                  <Icon n="check" s={15} />Subscribed
+                </button>
+              ) : (
+                <button className="btn btn-blue btn-sm" onClick={() => S.openModal("subscribe", c)}>Subscribe · ${c.price}/mo</button>
+              )}
+              <button className="btn btn-grad btn-sm" onClick={() => sendGift("🎁", 200)}><Icon n="gift" s={15} />Send gift</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => S.toast(`Link copied — fanation.app/live/${c.handle}`)} aria-label="Copy stream link">
+                <Icon n="repost" s={15} />
+              </button>
+>>>>>>> 7316819bc09288474c5ae807bfc08b740165f05a
             </div>
           </div>
+          <div className="card" style={{ padding: 18, marginTop: 20 }}>
+            <div className="b7 t16" style={{ marginBottom: 8 }}>About {c.name}</div>
+            <div className="muted t13" style={{ marginBottom: 10 }}>{followers.toLocaleString()} followers</div>
+            <div className="t14">{c.name} streams {c.tag.toLowerCase()} on Fanation — new sessions posted regularly.</div>
+          </div>
         </div>
+<<<<<<< HEAD
         <div className="card col rail" style={{ padding: 0, maxHeight: 648 }}>
           <div className="row between" style={{ padding: "14px 16px" }}>
             <span className="b7">Live chat</span>
@@ -421,6 +598,47 @@ export default function LiveStreamPage() {
               <Icon n="send" s={15} />
             </button>
           </div>
+=======
+        {/* Pinned at the same full viewport height Twitch's chat carries — it
+            outlives the shorter video card as the page scrolls to the About
+            section beneath it, exactly like `.side` already stays put beside
+            scrolling page content. */}
+        <div className="card col rail" style={{ padding: 0, flex: "none", width: chatOpen ? 300 : 48, transition: "width .15s ease", position: "sticky", top: "var(--topbar-h)", height: "calc(100vh - var(--topbar-h))", overflow: "hidden" }}>
+          {chatOpen ? (
+            <>
+              <div className="row between" style={{ padding: "14px 16px" }}>
+                <span className="b7">Live chat</span>
+                <button className="btn btn-ghost btn-sm" style={{ padding: 6 }} onClick={() => setChatOpen(false)} aria-label="Collapse chat">
+                  <Icon n="chevronRight" s={15} />
+                </button>
+              </div>
+              <hr className="divider" />
+              <div ref={boxRef} className="grow col gap4" style={{ padding: "12px 16px", overflowY: "auto" }}>
+                {chat.map((m, i) => (
+                  <div key={i} className="t13" style={{ lineHeight: 1.5, wordBreak: "break-word" }}>
+                    <b style={{ color: nameColor(m[0]) }}>{m[0]}</b>
+                    <span className="muted">: </span>
+                    <span>{m[1]}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="row gap6" style={{ padding: "10px 12px 4px", flexWrap: "wrap" }}>
+                {([["🌹", 50], ["🎁", 200], ["💎", 500], ["🚀", 1000]] as Array<[string, number]>).map((g) => (
+                  <button key={g[0]} className="pill t12" style={{ cursor: "pointer" }} onClick={() => sendGift(g[0], g[1])}>{g[0]} {g[1]}</button>
+                ))}
+              </div>
+              <div className="row gap8" style={{ padding: 12, borderTop: "1px solid var(--line)" }}>
+                <input className="input" placeholder="Say something…" value={msg}
+                  onChange={(e) => setMsg(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") sendChat(); }} />
+                <button className="btn btn-blue btn-sm" disabled={!msg.trim()} onClick={sendChat}><Icon n="send" s={15} /></button>
+              </div>
+            </>
+          ) : (
+            <button className="col center grow" style={{ width: "100%" }} onClick={() => setChatOpen(true)} aria-label="Expand chat">
+              <span className="row" style={{ transform: "rotate(180deg)" }}><Icon n="chevronRight" s={15} /></span>
+            </button>
+          )}
+>>>>>>> 7316819bc09288474c5ae807bfc08b740165f05a
         </div>
       </div>
     </div>
