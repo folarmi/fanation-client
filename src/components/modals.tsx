@@ -585,7 +585,7 @@ function ComposeModal({ defaultVis }: { defaultVis?: string }) {
 
 function PayoutModal() {
   const { payoutError, requestPayout, closeModal, toast } = useAppStore();
-  const [amt, setAmt] = useState("4280");
+  const [amt] = useState("4280");
   const n = parseInt(amt || "0", 10);
   const err = payoutError(n);
   return (

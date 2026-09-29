@@ -384,7 +384,7 @@ export default function Login() {
   // Separate not-verified flag for the Google flow so it doesn't
   // collide with the email/password form's state.
   const [notVerifiedErrorGoogle, setNotVerifiedErrorGoogle] = useState(false);
-  const [isProcessingRedirect, setIsProcessingRedirect] = useState(false);
+  const [, setIsProcessingRedirect] = useState(false);
 
   const { control, handleSubmit, getValues, register } =
     useForm<LoginFormValues>({

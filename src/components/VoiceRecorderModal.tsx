@@ -6,6 +6,7 @@
 
 import { Icon } from "@/lib/ui";
 import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
+import { MicGlyph } from "./toolbar-icons";
 
 const formatTime = (seconds: number) => {
   const mins = Math.floor(seconds / 60);
@@ -80,7 +81,7 @@ export function VoiceRecorderModal({
             animation: live ? "blink 1.4s ease-in-out infinite" : undefined,
           }}
         >
-          <Icon n="mic" s={36} c={live ? "#fff" : "var(--muted)"} />
+          <MicGlyph s={36} c={live ? "#fff" : "var(--muted)"} />
         </div>
 
         <div className="statnum" style={{ fontSize: 30 }}>

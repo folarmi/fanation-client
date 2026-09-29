@@ -739,6 +739,7 @@ import { RootState } from "@/services/store";
 import { CreatorUser } from "@/utils/types";
 import type { RawContent } from "@/lib/adapters/content";
 import { PostComposer } from "@/components/post-composer";
+import { PollGlyph } from "@/components/toolbar-icons";
 import { InfiniteLoader } from "@/components/infinite-loader";
 
 /* Each person's story is a short reel, not one frame — 2 to 4 segments,
@@ -1230,7 +1231,7 @@ export default function FeedPage() {
                       style={{ cursor: "pointer" }}
                       onClick={() => setComposer("poll")}
                     >
-                      <Icon n="poll" s={19} solid />
+                      <PollGlyph s={19} />
                     </span>
                   </div>
                   <div className="row gap10">

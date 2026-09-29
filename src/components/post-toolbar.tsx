@@ -15,6 +15,7 @@
 import { useRef } from "react";
 import { Icon } from "@/lib/ui";
 import { ACCEPT_ATTR } from "@/hooks/useFileQueue";
+import { PollGlyph, MicGlyph } from "./toolbar-icons";
 
 export function PostToolbar({
   onFilesSelected,
@@ -61,12 +62,12 @@ export function PostToolbar({
 
       {ifPoll && (
         <span style={{ cursor: "pointer" }} onClick={onStartPoll}>
-          <Icon n="poll" s={19} solid />
+          <PollGlyph s={19} />
         </span>
       )}
       {ifRecord && (
         <span style={{ cursor: "pointer" }} onClick={onRecordClick}>
-          <Icon n="mic" s={19} solid />
+          <MicGlyph s={19} />
         </span>
       )}
       {ifSchedule && (
