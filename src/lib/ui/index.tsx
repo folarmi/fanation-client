@@ -65,6 +65,10 @@ import chevronForwardOutline from "@/assets/icons/chevron-forward-outline.svg?ra
 import volumeMuteOutline from "@/assets/icons/volume-mute-outline.svg?raw";
 import volumeHighOutline from "@/assets/icons/volume-high-outline.svg?raw";
 import pauseOutline from "@/assets/icons/pause-outline.svg?raw";
+import playBackOutline from "@/assets/icons/play-back-outline.svg?raw";
+import playForwardOutline from "@/assets/icons/play-forward-outline.svg?raw";
+import expandOutline from "@/assets/icons/expand-outline.svg?raw";
+import contractOutline from "@/assets/icons/contract-outline.svg?raw";
 import heartSolid from "@/assets/icons/heart.svg?raw";
 import playSolid from "@/assets/icons/play.svg?raw";
 import checkmarkCircleSolid from "@/assets/icons/checkmark-circle.svg?raw";
@@ -93,6 +97,9 @@ import discSolid from "@/assets/icons/disc.svg?raw";
 import lockClosedSolid from "@/assets/icons/lock-closed.svg?raw";
 import repeatSolid from "@/assets/icons/repeat.svg?raw";
 import chatbubbleSolid from "@/assets/icons/chatbubble.svg?raw";
+import eyeSolid from "@/assets/icons/eye.svg?raw";
+import callSolid from "@/assets/icons/call.svg?raw";
+import happySolid from "@/assets/icons/happy.svg?raw";
 
 const inner = (raw: string) =>
   raw.replace(/^<svg[^>]*>/, "").replace(/<\/svg>\s*$/, "");
@@ -152,6 +159,10 @@ const OUTLINE: Record<string, string> = {
   volumeMute: outline(volumeMuteOutline),
   volumeHigh: outline(volumeHighOutline),
   pause: outline(pauseOutline),
+  rewind: outline(playBackOutline),
+  forward: outline(playForwardOutline),
+  expand: outline(expandOutline),
+  contract: outline(contractOutline),
 };
 
 const SOLID: Record<string, string> = {
@@ -181,6 +192,9 @@ const SOLID: Record<string, string> = {
   lock: inner(lockClosedSolid),
   repost: inner(repeatSolid),
   comment: inner(chatbubbleSolid),
+  eye: inner(eyeSolid),
+  call: inner(callSolid),
+  happy: inner(happySolid),
 };
 
 export function Icon({
@@ -692,7 +706,7 @@ export function StatCard({
       <div className="row between">
         <span className="up muted">{label}</span>
         <span style={{ color: color || "var(--muted)" }}>
-          <Icon n={icon} />
+          <Icon n={icon} solid />
         </span>
       </div>
       <div

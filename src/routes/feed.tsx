@@ -16,10 +16,12 @@
 // } from "@/lib/ui";
 // import { fhash } from "@/lib/core";
 // import { FollowBtn, PostCard } from "@/components/post-card";
-// import { useGetData } from "@/hooks/api/use-api";
+// import { useGetData, useInfiniteGetData } from "@/hooks/api/use-api"; // confirm useInfiniteGetData exists here — it's the paginated counterpart to useGetData
 // import { useAppSelector } from "@/services/hook";
 // import { RootState } from "@/services/store";
 // import { CreatorUser } from "@/utils/types";
+// import type { RawContent } from "@/lib/adapters/content";
+// import { decodeToken } from "@/utils/helper";
 
 // /* Each person's story is a short reel, not one frame — 2 to 4 segments,
 //    picked deterministically per handle so the count doesn't reshuffle on
@@ -297,7 +299,41 @@
 //   const { userObject } = useAppSelector((state: RootState) => state.auth);
 
 //   const [story, setStory] = useState<number | null>(null);
-//   const feed = S.feed();
+
+//   // Real feed data. This replaces the old `const feed = S.feed();` mock read —
+//   // `S` (useAppStore) is still used below for everything that's genuinely
+//   // local UI state (modals, toasts, coins, blocked/muted lists), just not
+//   // for the post list itself anymore.
+//   const {
+//     data: getTimelineContent,
+//     isLoading: feedLoading,
+//     fetchNextPage,
+//     hasNextPage,
+//     isFetchingNextPage,
+//   } = useInfiniteGetData({
+//     url: `contents?sort=createdDate,desc&liveStream=false`,
+//     queryKey: ["GetContents"],
+//     pageSize: 20,
+//   });
+
+//   const rawFeed: RawContent[] = useMemo(
+//     () =>
+//       getTimelineContent?.pages?.flatMap((page: any) => page.data?.content) ??
+//       [],
+//     [getTimelineContent],
+//   );
+
+//   // Blocked/muted previously worked implicitly because the mock store's
+//   // `S.feed()` already excluded those creators. With a real fetch that
+//   // filtering has to happen on this side.
+//   const feed = useMemo(
+//     () =>
+//       rawFeed.filter(
+//         (raw) =>
+//           !S.blocked[raw.creator?.username] && !S.muted[raw.creator?.username],
+//       ),
+//     [rawFeed, S.blocked, S.muted],
+//   );
 
 //   const { data: getAllCreators, isLoading: getAllCreatorsIsLoading } =
 //     useGetData({
@@ -307,16 +343,18 @@
 
 //   const suggested = useMemo(() => {
 //     const all =
-//       (getAllCreators as { data?: { content?: any[] } } | undefined)?.data
-//         ?.content || [];
-//     const currentUserId = userObject?.usid;
+//       (getAllCreators as { data?: { content?: CreatorUser[] } } | undefined)
+//         ?.data?.content || [];
+//     const currentUserName = decodeToken(userObject?.accessToken)?.username;
 //     return all.filter(
-//       (c: any) =>
-//         c.usid !== currentUserId && !S.blocked[c.handle] && !S.muted[c.handle],
+//       (creator) =>
+//         creator?.username !== currentUserName &&
+//         !S.blocked[creator.username] &&
+//         !S.muted[creator.username],
 //     );
 //   }, [getAllCreators, userObject?.usid, S.blocked, S.muted]);
 
-//   const liveNow = CREATORS.filter((c) => c.live && !S.blocked[c.handle]);
+//   const liveNow = CREATORS?.filter((c) => c.live && !S.blocked[c.handle]);
 //   return (
 //     <div className="content">
 //       <div className="split">
@@ -455,7 +493,24 @@
 //               </div>
 //             </div>
 //           </div>
-//           {feed.length === 0 && (
+
+//           {feedLoading && (
+//             <div className="card row center" style={{ padding: 48 }}>
+//               <span
+//                 aria-label="Loading feed"
+//                 style={{
+//                   width: 8,
+//                   height: 8,
+//                   borderRadius: 999,
+//                   background: "var(--muted)",
+//                   display: "block",
+//                   animation: "blink 1.4s ease-in-out infinite",
+//                 }}
+//               />
+//             </div>
+//           )}
+
+//           {!feedLoading && feed.length === 0 && (
 //             <div
 //               className="card col center gap10"
 //               style={{ padding: 48, textAlign: "center" }}
@@ -476,9 +531,20 @@
 //               </button>
 //             </div>
 //           )}
-//           {feed.map((p) => (
-//             <PostCard key={p.id} p={p} />
+
+//           {feed.map((raw) => (
+//             <PostCard key={raw.publicId} raw={raw} />
 //           ))}
+
+//           {hasNextPage && (
+//             <button
+//               className="btn btn-ghost btn-block"
+//               disabled={isFetchingNextPage}
+//               onClick={() => fetchNextPage()}
+//             >
+//               {isFetchingNextPage ? "Loading…" : "Load more"}
+//             </button>
+//           )}
 //         </div>
 //         <div className="col gap16 rail">
 //           <div className="card" style={{ padding: 16 }}>
@@ -519,18 +585,6 @@
 //                     animation: "blink 1.4s ease-in-out infinite",
 //                   }}
 //                 />
-//             <div className="up muted" style={{ marginBottom: 12 }}>Suggested creators</div>
-//             {suggested.map((c) => (
-//               <div key={c.id} className="row between" style={{ padding: "8px 0" }}>
-//                 <div className="row gap10" style={{ cursor: "pointer" }} onClick={() => navigate(`/creator/${c.handle}`)}>
-//                   <Avatar name={c.name} size={38} ring={c.live ? "var(--coral)" : undefined}
-//                     onClick={c.live ? (e) => { e.stopPropagation(); navigate(`/live/${c.handle}`); } : undefined} />
-//                   <div className="col">
-//                     <div className="row gap4 t14 b6 uname">{c.name.split(" ")[0]} {c.v && <Verified s={13} />}</div>
-//                     <div className="muted t12">@{c.handle}</div>
-//                   </div>
-//                 </div>
-//                 <FollowBtn handle={c.handle} />
 //               </div>
 //             ) : suggested.length === 0 ? (
 //               <div
@@ -544,31 +598,33 @@
 //                 className="no-scrollbar"
 //                 style={{ maxHeight: 280, overflowY: "auto" }}
 //               >
-//                 {suggested?.map((c: CreatorUser) => (
+//                 {suggested.map((creator) => (
 //                   <div
-//                     key={c?.publicId}
+//                     key={creator.publicId}
 //                     className="row between"
 //                     style={{ padding: "8px 0" }}
 //                   >
 //                     <div
 //                       className="row gap10"
 //                       style={{ cursor: "pointer" }}
-//                       onClick={() => navigate(`/creator/${c?.username}`)}
+//                       onClick={() => navigate(`/creator/${creator.username}`)}
 //                     >
 //                       <Avatar
-//                         src={c?.profileImageUrl}
-//                         name={c?.fullName}
+//                         src={creator.profileImageUrl}
+//                         name={creator.fullName}
 //                         size={38}
 //                       />
 //                       <div className="col">
 //                         <div className="row gap4 t14 b6 uname">
-//                           {c.fullName?.split(" ")[0]}{" "}
-//                           {/* {c.v && <Verified s={13} />} */}
+//                           {creator.fullName?.split(" ")[0]}{" "}
+//                           {creator.creatorProfile?.verified && (
+//                             <Verified s={13} />
+//                           )}
 //                         </div>
-//                         <div className="muted t12">@{c.username}</div>
+//                         <div className="muted t12">@{creator.username}</div>
 //                       </div>
 //                     </div>
-//                     <FollowBtn publicId={c?.publicId} />
+//                     <FollowBtn username={creator.username} />
 //                   </div>
 //                 ))}
 //               </div>
@@ -622,7 +678,7 @@
 //                         bottom: 10,
 //                       }}
 //                     >
-//                       <Avatar name={c.name} size={32} />
+//                       <Avatar name={c.name} size={32} ring="var(--coral)" />
 //                       <div className="col" style={{ minWidth: 0 }}>
 //                         <div
 //                           className="t14 b6 uname"
@@ -682,7 +738,9 @@ import { useAppSelector } from "@/services/hook";
 import { RootState } from "@/services/store";
 import { CreatorUser } from "@/utils/types";
 import type { RawContent } from "@/lib/adapters/content";
-// import { decodeToken } from "@/utils/helper";
+import { PollGlyph } from "@/components/toolbar-icons";
+import { PostComposer } from "@/components/post-composer";
+import { InfiniteLoader } from "@/components/infinite-loader";
 
 /* Each person's story is a short reel, not one frame — 2 to 4 segments,
    picked deterministically per handle so the count doesn't reshuffle on
@@ -701,8 +759,6 @@ function StoryViewer({ idx, close }: { idx: number; close: () => void }) {
   const [si, setSi] = useState(0);
   const [paused, setPaused] = useState(false);
   const [muted, setMuted] = useState(true);
-  const { userObject } = useAppSelector((state: RootState) => state.auth);
-
   const c =
     CREATORS[((ci % CREATORS.length) + CREATORS.length) % CREATORS.length];
   const segCount = segCountFor(c.handle);
@@ -749,11 +805,9 @@ function StoryViewer({ idx, close }: { idx: number; close: () => void }) {
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
   }, []);
-
   /* The peeked neighbour only ever shows its still frame — Instagram doesn't
      autoplay the cards either side, and decoding two more videos for a strip
      the person cannot interact with yet would be pure waste. */
-
   const Peek = ({ at }: { at: number }) => {
     const n =
       CREATORS[((at % CREATORS.length) + CREATORS.length) % CREATORS.length];
@@ -780,7 +834,6 @@ function StoryViewer({ idx, close }: { idx: number; close: () => void }) {
       </div>
     );
   };
-
   return (
     <div
       className="overlay"
@@ -963,8 +1016,16 @@ export default function FeedPage() {
   const S = useAppStore();
   const navigate = useNavigate();
   const { userObject } = useAppSelector((state: RootState) => state.auth);
+  // Only creators can post — the same check your old Home used. Everyone else
+  // sees the feed without the composer.
+  const isCreator = userObject?.role === "CREATOR";
 
   const [story, setStory] = useState<number | null>(null);
+  // null = the compact card; otherwise the full composer is open — as a normal
+  // post, a poll, or a post with "schedule for later" already switched on
+  const [composer, setComposer] = useState<null | "post" | "poll" | "schedule">(
+    null,
+  );
 
   // Real feed data. This replaces the old `const feed = S.feed();` mock read —
   // `S` (useAppStore) is still used below for everything that's genuinely
@@ -996,9 +1057,13 @@ export default function FeedPage() {
     () =>
       rawFeed.filter(
         (raw) =>
-          !S.blocked[raw.creator?.username] && !S.muted[raw.creator?.username],
+          !S.blocked[raw.creator?.username] &&
+          !S.muted[raw.creator?.username] &&
+          // "Not interested" -> S.hide(id). If your store keeps hidden ids
+          // under a different name than `hidden`, this is the one line to change.
+          !S.hidden?.[raw.publicId],
       ),
-    [rawFeed, S.blocked, S.muted],
+    [rawFeed, S.blocked, S.muted, S.hidden],
   );
 
   const { data: getAllCreators, isLoading: getAllCreatorsIsLoading } =
@@ -1014,13 +1079,11 @@ export default function FeedPage() {
     const currentUserId = userObject?.usid;
     return all.filter(
       (creator) =>
-        creator?.publicId !== currentUserId &&
+        creator.publicId !== currentUserId &&
         !S.blocked[creator.username] &&
         !S.muted[creator.username],
     );
   }, [getAllCreators, userObject?.usid, S.blocked, S.muted]);
-
-  // console.log(userObject, getAllCreators?.data?.content);
 
   const liveNow = CREATORS?.filter((c) => c.live && !S.blocked[c.handle]);
   return (
@@ -1127,40 +1190,62 @@ export default function FeedPage() {
           {story != null && (
             <StoryViewer key={story} idx={story} close={() => setStory(null)} />
           )}
-          <div className="card" style={{ padding: 16 }}>
-            <div className="row gap12">
-              <Avatar name="You" size={40} />
-              <input
-                className="input"
-                placeholder="Share something with your fans…"
-                readOnly
-                style={{ cursor: "pointer" }}
-                onClick={() => S.openModal("compose")}
+          {isCreator &&
+            (composer ? (
+              <PostComposer
+                initialMode={composer === "poll" ? "poll" : "post"}
+                initialScheduling={composer === "schedule"}
+                onClose={() => setComposer(null)}
               />
-            </div>
-            <div className="row between" style={{ marginTop: 12 }}>
-              <div className="row gap16 muted">
-                {["camera", "play", "gift", "cal"].map((i) => (
-                  <span
-                    key={i}
+            ) : (
+              <div className="card" style={{ padding: 16 }}>
+                <div className="row gap12">
+                  <Avatar name="You" size={40} />
+                  <input
+                    className="input"
+                    placeholder="Share something with your fans…"
+                    readOnly
                     style={{ cursor: "pointer" }}
-                    onClick={() => S.openModal("compose")}
-                  >
-                    <Icon n={i} s={19} solid />
-                  </span>
-                ))}
+                    onClick={() => setComposer("post")}
+                  />
+                </div>
+                <div className="row between" style={{ marginTop: 12 }}>
+                  <div className="row gap16 muted">
+                    {["camera", "play", "gift", "cal"].map((i) => (
+                      <span
+                        key={i}
+                        style={{ cursor: "pointer" }}
+                        // camera/play open the composer; cal opens it with scheduling
+                        // on. gift (paid posts) isn't built yet, so it keeps opening
+                        // the existing compose modal exactly as before.
+                        onClick={() =>
+                          i === "gift"
+                            ? S.openModal("compose")
+                            : setComposer(i === "cal" ? "schedule" : "post")
+                        }
+                      >
+                        <Icon n={i} s={19} solid />
+                      </span>
+                    ))}
+                    <span
+                      style={{ cursor: "pointer" }}
+                      onClick={() => setComposer("poll")}
+                    >
+                      <PollGlyph s={19} />
+                    </span>
+                  </div>
+                  <div className="row gap10">
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => navigate("/studio/live")}
+                    >
+                      <Icon n="live" s={15} c="var(--coral-ink)" solid />
+                      Go Live
+                    </button>
+                  </div>
+                </div>
               </div>
-              <div className="row gap10">
-                <button
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => navigate("/studio/live")}
-                >
-                  <Icon n="live" s={15} c="var(--coral-ink)" solid />
-                  Go Live
-                </button>
-              </div>
-            </div>
-          </div>
+            ))}
 
           {feedLoading && (
             <div className="card row center" style={{ padding: 48 }}>
@@ -1204,15 +1289,11 @@ export default function FeedPage() {
             <PostCard key={raw.publicId} raw={raw} />
           ))}
 
-          {hasNextPage && (
-            <button
-              className="btn btn-ghost btn-block"
-              disabled={isFetchingNextPage}
-              onClick={() => fetchNextPage()}
-            >
-              {isFetchingNextPage ? "Loading…" : "Load more"}
-            </button>
-          )}
+          <InfiniteLoader
+            onLoadMore={fetchNextPage}
+            hasMore={hasNextPage}
+            isLoading={isFetchingNextPage}
+          />
         </div>
         <div className="col gap16 rail">
           <div className="card" style={{ padding: 16 }}>
@@ -1292,7 +1373,7 @@ export default function FeedPage() {
                         <div className="muted t12">@{creator.username}</div>
                       </div>
                     </div>
-                    <FollowBtn publicId={creator?.publicId} />
+                    <FollowBtn username={creator.username} />
                   </div>
                 ))}
               </div>

@@ -114,5 +114,206 @@ export interface CreatorUser {
   username: string;
   websiteUrl: string;
   displayName: string;
+  email: string;
   creatorProfile: CreatorProfile;
 }
+
+export interface ReactionCount {
+  LIKE: number;
+  LOVE: number;
+  DISLIKE: number;
+  LOL: number;
+}
+
+export interface PostCreator {
+  email: string;
+  name: string;
+  profilePic: string;
+  username: string;
+}
+
+export interface PollChoice {
+  choice: string;
+  publicId: string;
+  votes?: string[];
+  createdBy: string;
+  lastModifiedBy: string;
+  createdDate: string;
+  lastModifiedDate: string;
+}
+
+export interface PollDuration {
+  days: number;
+  hours: number;
+  minutes: number;
+}
+
+export interface BookMark {
+  email: string;
+  name: string;
+  profilePic: string;
+  username: string;
+}
+
+export type MediaType = "PHOTO" | "VIDEO" | "AUDIO" | "DOCUMENT";
+export type ReactionType = "LIKE" | "LOVE" | "DISLIKE" | "LOL";
+export interface IsReactionLiked {
+  isLiked: boolean;
+}
+export interface MediaFile {
+  publicId: string;
+  createdBy: string;
+  lastModifiedBy: string;
+  createdDate: string;
+  lastModifiedDate: string;
+  mediaType: MediaType;
+  mediaLink: string;
+}
+export interface Reaction {
+  publicId: string;
+  createdBy: string;
+  lastModifiedBy: string;
+  createdDate: string;
+  lastModifiedDate: string;
+  type: ReactionType;
+}
+
+export interface ReactionItem {
+  type: string;
+  number: number;
+  createdBy: string[]; // was this already an array? make sure it is
+}
+
+// Live Reactions
+export interface LiveReaction {
+  id: string | number;
+  session: string;
+  reactionType: ReactionType;
+  user?: string;
+  userId?: string;
+  username?: string;
+  timestamp?: number;
+}
+
+export interface LiveReactionPayload {
+  session: string;
+  reactionType: ReactionType;
+}
+
+// ✅ Floating reaction for animation
+export interface FloatingReaction {
+  id: string;
+  type: ReactionType;
+  x: number; // Random horizontal position
+  y: number; // Starting vertical position
+}
+
+// ✅ Reaction count for display
+export interface ReactionCount {
+  LIKE: number;
+  LOVE: number;
+  DISLIKE: number;
+  LOL: number;
+}
+
+export interface PostCreator {
+  email: string;
+  name: string;
+  profilePic: string;
+  username: string;
+}
+
+export interface PollChoice {
+  choice: string;
+  publicId: string;
+  votes?: string[];
+  createdBy: string;
+  lastModifiedBy: string;
+  createdDate: string;
+  lastModifiedDate: string;
+}
+
+export interface PollDuration {
+  days: number;
+  hours: number;
+  minutes: number;
+}
+
+export interface BookMark {
+  email: string;
+  name: string;
+  profilePic: string;
+  username: string;
+}
+
+export interface StoryPost {
+  publicId: string;
+  createdBy: string;
+  lastModifiedBy: string;
+  createdDate: string;
+  lastModifiedDate: string;
+  creator: PostCreator;
+  message: string;
+  mediaFiles: MediaFile[];
+  comments: PostComment[];
+  reactions: Reaction[];
+  viewers: string[];
+  mentions: string[];
+  reposters: { email: string }[];
+  bookmarkers: BookMark[];
+  pollChoices?: PollChoice[];
+  pollDuration?: PollDuration;
+  meta: PostMeta;
+  replies: StoryPost[];
+  content?: any;
+}
+
+export interface PostComment {
+  publicId: string;
+  createdBy: string;
+  lastModifiedBy: string;
+  createdDate: string;
+  lastModifiedDate: string;
+  message: string;
+  replies: PostComment[];
+  reactions: Reaction[];
+}
+
+export interface PostMeta {
+  reactionCount: number;
+  commentCount: number;
+  viewCount: number;
+}
+
+export interface SortInfo {
+  sorted: boolean;
+  unsorted: boolean;
+  empty: boolean;
+}
+
+export interface StoryPost {
+  publicId: string;
+  createdBy: string;
+  lastModifiedBy: string;
+  createdDate: string;
+  lastModifiedDate: string;
+  creator: PostCreator;
+  message: string;
+  mediaFiles: MediaFile[];
+  comments: PostComment[];
+  reactions: Reaction[];
+  viewers: string[];
+  mentions: string[];
+  reposters: { email: string }[];
+  bookmarkers: BookMark[];
+  pollChoices?: PollChoice[];
+  pollDuration?: PollDuration;
+  meta: PostMeta;
+  replies: StoryPost[];
+  content?: any;
+}
+
+export type MediaItem = {
+  mediaType: MediaType;
+  mediaLink: string;
+};

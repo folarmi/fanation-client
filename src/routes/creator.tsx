@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { SEED_FEED, byHandle, useAppStore } from "@/lib/core";
+import { byHandle, useAppStore } from "@/lib/core";
 import {
   Avatar,
   Icon,
@@ -8,25 +8,18 @@ import {
   SIZES,
   // Verified,
   coverFor,
-  gridFor,
 } from "@/lib/ui";
 import { FollowBtn, PostCard } from "@/components/post-card";
-import { useGetData } from "@/hooks/api/use-api";
+import { useGetData, useInfiniteGetData } from "@/hooks/api/use-api";
 import { CreatorUser } from "@/utils/types";
+import { InfiniteLoader } from "@/components/infinite-loader";
+import { MediaTab } from "@/components/MediaTab";
 
-/**
- * `/creator/:handle`. The handle comes off the URL, so it is `string | undefined`
- * until the router has matched — `byHandle` falls back to the first seeded creator
- * rather than throwing, which keeps a hand-typed or stale link on a real page.
- */
 export default function CreatorProfilePage() {
   const { handle = "" } = useParams<{ handle: string }>();
   const S = useAppStore();
   const navigate = useNavigate();
-  const c = byHandle(handle);
   const [tab, setTab] = useState("Posts");
-  const isSub = !!S.subs[c.handle];
-  const posts = SEED_FEED.filter((p) => p.h === c.handle).slice(0, 6);
 
   const { data: profileData } = useGetData({
     url: `profile/${handle}`,
@@ -35,6 +28,46 @@ export default function CreatorProfilePage() {
 
   const creatorProfile = (profileData as { data?: CreatorUser } | undefined)
     ?.data;
+
+  // The Subscribe / Gift / Tip modals were written for a mock `Creator`, and
+  // byHandle() falls back to CREATORS[0] for any creator it doesn't know —
+  // i.e. every real one — which sent gifts, tips and subscriptions to the WRONG
+  // person. Start from whatever it returns (so the modals still get every field
+  // they expect) and overwrite the identity with the real profile. `live` only
+  // exists in the mock directory, so an unknown creator is never "live".
+  // (price and tag still come from the mock: there's no real data for them yet.)
+  const mock = byHandle(handle);
+  const known = mock.handle === handle;
+  const c = {
+    ...mock,
+    id: known ? mock.id : handle,
+    handle,
+    name: creatorProfile?.fullName ?? (known ? mock.name : handle),
+    live: known ? mock.live : false,
+  };
+  const isSub = !!S.subs[c.handle];
+
+  const {
+    data: creatorContentPages,
+    isLoading: creatorContentIsLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteGetData({
+    url: `contents?creator=${creatorProfile?.email}&liveStream=false&sort=createdDate,desc`,
+    queryKey: ["GetUserContent", creatorProfile?.email ?? ""],
+    enabled: !!creatorProfile?.email, // don't fetch until we have the email
+    pageSize: 20,
+  });
+
+  // Was reading only pages[0] — later pages fetched via fetchNextPage were
+  // silently dropped. Flatten all fetched pages, same as FeedPage.tsx.
+  const creatorContent = useMemo(
+    () =>
+      creatorContentPages?.pages?.flatMap((page: any) => page.data?.content) ??
+      [],
+    [creatorContentPages],
+  );
 
   return (
     <div>
@@ -48,6 +81,7 @@ export default function CreatorProfilePage() {
           seed={c.id}
         />
       </div>
+
       {/* The avatar alone rides up into the photograph; the name, handle and
           counts sit below it on the page background. Pulling the whole header
           block up put the name inside the cover, and a third of the covers are
@@ -80,6 +114,7 @@ export default function CreatorProfilePage() {
             onClick={c.live ? () => navigate(`/live/${c.handle}`) : undefined}
           />
         </div>
+
         <div
           className="row between wrap"
           style={{ alignItems: "flex-end", gap: 16, marginTop: 14 }}
@@ -110,8 +145,12 @@ export default function CreatorProfilePage() {
               </span>
             </div>
           </div>
+
           <div className="row gap10">
-            <FollowBtn username={c.handle} />
+            {/* FollowBtn takes `username` — prefer the real fetched profile's
+                username, falling back to the mock handle if that hasn't
+                loaded yet. */}
+            <FollowBtn username={creatorProfile?.username ?? c.handle} />
             <button
               className="btn btn-ghost"
               onClick={() => navigate("/messages")}
@@ -141,6 +180,7 @@ export default function CreatorProfilePage() {
             )}
           </div>
         </div>
+
         <div
           className="row gap24"
           style={{ margin: "22px 0 0", borderBottom: "1px solid var(--line)" }}
@@ -164,72 +204,62 @@ export default function CreatorProfilePage() {
             </div>
           ))}
         </div>
+
         <div className="split" style={{ marginTop: 20 }}>
           <div className="grow col gap16" style={{ maxWidth: 620 }}>
             {tab === "Media" ? (
-              <div className="grid g3 gap10">
-                {Array.from({ length: 18 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="card"
-                    style={{
-                      padding: 0,
-                      overflow: "hidden",
-                      aspectRatio: "1",
-                      position: "relative",
-                      cursor: "pointer",
-                    }}
-                    onClick={() => {
-                      if (i % 4 === 0)
-                        S.openModal("ppv", {
-                          id: `pm${i}`,
-                          price: 150,
-                          who: c.name,
-                        });
-                    }}
-                  >
-                    <Photo
-                      sizes={SIZES.profileGrid}
-                      src={gridFor(c.handle, i)}
-                      seed={`prof${i}`}
-                    />
-                    {i % 4 === 0 && (
-                      <div
-                        className="chip-coin onart"
-                        style={{
-                          position: "absolute",
-                          top: 8,
-                          left: 8,
-                          padding: "2px 7px",
-                        }}
-                      >
-                        <Icon n="lock" s={11} />
-                        PPV
-                      </div>
-                    )}
-                    {i % 5 === 2 && (
-                      <div
-                        className="pill t12 onart"
-                        style={{ position: "absolute", bottom: 8, right: 8 }}
-                      >
-                        <Icon n="play" s={11} />
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
+              <MediaTab
+                posts={creatorContent}
+                isLoading={creatorContentIsLoading}
+                hasNextPage={hasNextPage}
+                isFetchingNextPage={isFetchingNextPage}
+                fetchNextPage={fetchNextPage}
+              />
             ) : (
-              posts.map((p) => <PostCard key={p.id} p={p} />)
+              <>
+                {creatorContentIsLoading && (
+                  <div className="card row center" style={{ padding: 40 }}>
+                    <span
+                      aria-label="Loading posts"
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: 999,
+                        background: "var(--muted)",
+                        display: "block",
+                        animation: "blink 1.4s ease-in-out infinite",
+                      }}
+                    />
+                  </div>
+                )}
+
+                {/* was: creatorContent?.map((p) => <PostCard key={p.id} p={p} />)
+                    — PostCard takes `raw`, not `p`, and posts key off
+                    `publicId`, not `id`. This is why nothing rendered. */}
+                {creatorContent.map((raw) => (
+                  <PostCard key={raw.publicId} raw={raw} />
+                ))}
+
+                <InfiniteLoader
+                  onLoadMore={fetchNextPage}
+                  hasMore={hasNextPage}
+                  isLoading={isFetchingNextPage}
+                />
+              </>
             )}
-            {tab === "Posts" && posts.length === 0 && (
-              <div className="card col center gap8" style={{ padding: 40 }}>
-                <div className="b7">No posts in this seed</div>
-                <div className="muted t13">
-                  This creator&apos;s posts populate from the API at
-                  integration.
+            {/* was checking the mock `posts` array's length, not the real
+                fetched content, so this could show/hide incorrectly. */}
+            {tab === "Posts" &&
+              !creatorContentIsLoading &&
+              creatorContent.length === 0 && (
+                <div className="card col center gap8" style={{ padding: 40 }}>
+                  <div className="b7">No posts yet</div>
+                  <div className="muted t13">
+                    {creatorProfile?.displayName ?? "This creator"} hasn&apos;t
+                    posted anything yet.
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
           </div>
           <div className="col gap16 rail">
             <div className="card" style={{ padding: 18 }}>
