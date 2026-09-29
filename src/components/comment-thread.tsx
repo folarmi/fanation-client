@@ -26,6 +26,8 @@ import { formatTimeAgo } from "@/utils/helper";
 import type { FeedComment, FeedMedia } from "@/lib/adapters/content";
 import { CommentComposer } from "./comment-composer";
 import { MentionText } from "./MentionText";
+import { ReactionButton } from "./reaction-button";
+import type { ReactionType } from "@/utils/types";
 import { MediaExtras } from "./media-extras";
 import { MediaLightbox } from "./media-light-box";
 
@@ -211,21 +213,16 @@ function CommentItem({
 
           <div
             className="row gap16 muted t13"
-            style={{ marginTop: 6, flexWrap: "wrap" }}
+            style={{ marginTop: 6, flexWrap: "wrap", alignItems: "center" }}
           >
-            <button
-              className="row gap6 muted"
-              onClick={() => (comment.liked ? removeReaction() : react("LIKE"))}
-              style={{ color: comment.liked ? "var(--coral-ink)" : "" }}
-              aria-label={comment.liked ? "Unlike" : "Like"}
-            >
-              <Icon
-                n="heart"
-                s={15}
-                fill={comment.liked ? "var(--coral-ink)" : undefined}
-              />
-              {comment.likes > 0 && comment.likes.toLocaleString()}
-            </button>
+            <ReactionButton
+              myReaction={comment.myReaction}
+              totalCount={comment.reactionCount}
+              byReactionType={comment.byReactionType}
+              onReact={(type: ReactionType) => react(type)}
+              onRemove={removeReaction}
+              size={15}
+            />
 
             {depth < MAX_DEPTH && (
               <button className="muted" onClick={() => setReplying((v) => !v)}>

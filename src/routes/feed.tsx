@@ -739,6 +739,7 @@ import { RootState } from "@/services/store";
 import { CreatorUser } from "@/utils/types";
 import type { RawContent } from "@/lib/adapters/content";
 import { PostComposer } from "@/components/post-composer";
+import { InfiniteLoader } from "@/components/infinite-loader";
 
 /* Each person's story is a short reel, not one frame — 2 to 4 segments,
    picked deterministically per handle so the count doesn't reshuffle on
@@ -1287,15 +1288,11 @@ export default function FeedPage() {
             <PostCard key={raw.publicId} raw={raw} />
           ))}
 
-          {hasNextPage && (
-            <button
-              className="btn btn-ghost btn-block"
-              disabled={isFetchingNextPage}
-              onClick={() => fetchNextPage()}
-            >
-              {isFetchingNextPage ? "Loading…" : "Load more"}
-            </button>
-          )}
+          <InfiniteLoader
+            onLoadMore={fetchNextPage}
+            hasMore={hasNextPage}
+            isLoading={isFetchingNextPage}
+          />
         </div>
         <div className="col gap16 rail">
           <div className="card" style={{ padding: 16 }}>

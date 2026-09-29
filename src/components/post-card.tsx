@@ -506,12 +506,15 @@ import {
   usePollVote,
 } from "@/hooks/useContentInteractions";
 import { useSubscriptionStatus } from "@/hooks/useSubscriptionStatus";
-import { MediaExtras } from "./media-extras";
+
+import type { ReactionType } from "@/utils/types";
 import { MediaLightbox } from "./media-light-box";
+import { MediaExtras } from "./media-extras";
 import { MentionText } from "./MentionText";
+import { ReactionButton } from "./reaction-button";
 import { CommentComposer } from "./comment-composer";
-import { ConfirmDialog } from "./confirm-dialog";
 import { EditPostDialog } from "./edit-post-dialog";
+import { ConfirmDialog } from "./confirm-dialog";
 
 const MEDIA_H = 420;
 const LOCKED_H = 320;
@@ -853,7 +856,7 @@ export function PostCard({
 
   return (
     <div
-      className="card cursor-pointer"
+      className="card"
       style={{ padding: 18 }}
       ref={rootRef}
       onClick={
@@ -1091,22 +1094,13 @@ export function PostCard({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="row gap20 postacts">
-          <button
-            className="row gap6 muted"
-            onClick={() =>
-              post.myReaction === "LIKE" ? removeReaction() : react("LIKE")
-            }
-            style={{
-              color: post.myReaction === "LIKE" ? "var(--coral-ink)" : "",
-            }}
-          >
-            <Icon
-              n="heart"
-              s={19}
-              fill={post.myReaction === "LIKE" ? "var(--coral-ink)" : undefined}
-            />
-            {post.counts.reactions}
-          </button>
+          <ReactionButton
+            myReaction={post.myReaction}
+            totalCount={post.counts.reactions}
+            byReactionType={post.counts.byReactionType}
+            onReact={(type: ReactionType) => react(type)}
+            onRemove={removeReaction}
+          />
           <button
             className="row gap6 muted"
             onClick={() =>
